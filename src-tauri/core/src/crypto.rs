@@ -6,7 +6,7 @@ use crate::error::{AppError, AppResult};
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 use serde::Serialize;
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
 
 use aes_gcm::aead::{Aead, AeadCore, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce as GcmNonce};
@@ -43,7 +43,10 @@ fn derive_key(mode: &str, key: &str) -> AppResult<[u8; 32]> {
             if key.is_empty() {
                 return Err(AppError::Invalid("口令不能为空".to_string()));
             }
-            out.copy_from_slice(&Sha256::digest(key.as_bytes()));
+            // 口令原始字节作密钥：不足 32 字节用 \0 补齐、超过则截断（out 已零初始化）。
+            let bytes = key.as_bytes();
+            let n = bytes.len().min(32);
+            out[..n].copy_from_slice(&bytes[..n]);
             Ok(out)
         }
         "hex" => {
@@ -314,6 +317,17 @@ mod tests {
     #[test]
     fn bad_hex_key_len_errors() {
         assert!(derive_key("hex", "abcd").is_err());
+    }
+
+    #[test]
+    fn passphrase_key_zero_padded() {
+        // 16 字节口令 → 原样 16 字节 + 16 个 \0；超过 32 截断
+        let k = derive_key("passphrase", "5qEBzrSccgOyWCSk").unwrap();
+        let mut expected = [0u8; 32];
+        expected[..16].copy_from_slice(b"5qEBzrSccgOyWCSk");
+        assert_eq!(k, expected);
+        // 超过 32 字节截断
+        assert_eq!(derive_key("passphrase", &"x".repeat(40)).unwrap(), [b'x'; 32]);
     }
 
     #[test]

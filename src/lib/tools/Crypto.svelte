@@ -77,7 +77,7 @@
         />
       </div>
       {#if keyMode === "passphrase"}
-        <input bind:value={keyPass} placeholder="输入口令（SHA-256 派生 32 字节密钥）" class="{cls.field} font-mono" />
+        <input bind:value={keyPass} placeholder="输入口令（原始字节不足 32 补零、超过截断作密钥）" class="{cls.field} font-mono" />
       {:else if keyMode === "hex"}
         <input bind:value={keyHex} placeholder="32 字节密钥的 Hex（64 个十六进制字符）" class="{cls.field} font-mono" />
       {:else}
