@@ -1,0 +1,55 @@
+name: Release
+
+# 推送 v* tag 时，在 macOS 与 Windows 各自的 runner 上构建并发布安装包。
+# 也可在 Actions 页面手动触发（workflow_dispatch）。
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest # Apple Silicon + Intel 通用包
+            rust-targets: "aarch64-apple-darwin,x86_64-apple-darwin"
+            args: "--target universal-apple-darwin"
+          - platform: windows-latest # MSVC，产出 NSIS + MSI
+            rust-targets: ""
+            args: ""
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # 本机 .cargo/config.toml 含 rsproxy 源替换与 D:\minGw64 GNU 链接器锁定，
+      # 仅适用于开发者本地（国内 + GNU 工具链）。CI 用官方源与平台默认链接器。
+      - name: Drop local-only cargo config
+        shell: bash
+        run: rm -f .cargo/config.toml
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+
+      - name: Install frontend deps
+        run: npm install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Toolset ${{ github.ref_name }}"
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

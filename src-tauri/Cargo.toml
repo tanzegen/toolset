@@ -1,0 +1,31 @@
+[package]
+name = "toolset"
+version = "0.1.0"
+description = "开发者工具集（Windows 桌面端）"
+authors = ["you"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# 仅桌面端：用 rlib 让 bin 静态链接，产出 .exe（无 DLL 导出表）。
+# 不用 cdylib —— 它会导出海量符号，触发旧 binutils(ld 8.1) 的
+# “export ordinal too large” 错误。日后做移动端再按需加回 cdylib/staticlib。
+name = "toolset_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-clipboard-manager = "2"
+toolset-core = { path = "core" }
+
+# 体积/内存优化：压小 release 二进制
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

@@ -1,0 +1,28 @@
+# 本地构建配置模板（仅本机开发需要）。
+#
+# 用法：复制为同目录下的 .cargo/config.toml，再按本机情况取消注释。
+# 真实的 .cargo/config.toml 已被 .gitignore 忽略，不会提交——因为它含本机
+# 绝对路径与国内镜像，因机器/网络而异。
+#
+# 普通机器与 CI 用默认 crates.io + 平台默认链接器即可，无需本文件。
+
+# --- GNU 工具链：把链接器锁到本机 64 位 MinGW-w64（按实际安装路径修改）---
+# 仅当用 stable-x86_64-pc-windows-gnu 目标构建时需要；MSVC 工具链无需。
+# [target.x86_64-pc-windows-gnu]
+# linker = "D:/minGw64/bin/gcc.exe"
+# ar = "D:/minGw64/bin/ar.exe"
+
+# --- crates.io 国内镜像（rsproxy），解决官方源拉取超时 ---
+# [source.crates-io]
+# replace-with = "rsproxy-sparse"
+#
+# [source.rsproxy-sparse]
+# registry = "sparse+https://rsproxy.cn/index/"
+
+# --- 弱网容错 ---
+# [net]
+# retry = 10
+#
+# [http]
+# multiplexing = false
+# timeout = 120

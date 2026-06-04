@@ -1,0 +1,43 @@
+# ---- 依赖 ----
+node_modules
+/package
+
+# ---- 构建产物 ----
+/build
+/.svelte-kit
+
+# ---- 环境变量 / 机密 ----
+.env
+.env.*
+!.env.example
+
+# ---- 日志 ----
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- 编辑器 / IDE ----
+.idea
+*.swp
+*.swo
+*~
+
+# ---- 操作系统垃圾文件 ----
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ---- Vite 临时文件 ----
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# ---- 本地工具链 / 镜像配置（仅本机，不入库）----
+# 含 GNU 链接器绝对路径与国内镜像，因机器而异；按 .cargo/config.toml.example 在本地创建。
+/.cargo/config.toml
+
+# 说明：Rust/Tauri 产物（src-tauri/target、gen/schemas）由 src-tauri/.gitignore 负责。
+# Cargo.lock 与 package-lock.json 应提交（保证可复现构建），故不在忽略之列。
+# .cargo/config.toml.example 为模板（已提交、不被 cargo 自动加载）。
