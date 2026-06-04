@@ -3,6 +3,7 @@
 pub mod error;
 pub mod util;
 
+pub mod crypto;
 pub mod cron;
 pub mod encoding;
 pub mod hashing;
@@ -11,7 +12,9 @@ pub mod jsonstruct;
 pub mod localip;
 pub mod naming;
 pub mod numeric;
+pub mod password;
 pub mod regextool;
 pub mod subnet;
 pub mod textdiff;
 pub mod timestamp;
+pub mod zhconvert;

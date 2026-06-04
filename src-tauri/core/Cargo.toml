@@ -1,6 +1,6 @@
 [package]
 name = "toolset-core"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "工具集纯逻辑核心（无 GUI 依赖，可独立单测）"
 
@@ -20,3 +20,13 @@ regex = "1"
 heck = "0.5"
 croner = "3"
 if-addrs = "0.13"
+getrandom = "0.2"
+# 加密工具（纯 Rust，RustCrypto + rsa）
+aes-gcm = "0.10"
+aes = "0.8"
+cbc = { version = "0.1", features = ["alloc"] }
+chacha20poly1305 = "0.10"
+rsa = { version = "0.9", features = ["pem"] }
+rand = "0.8"
+hex = "0.4"
+zhconv = "0.4"

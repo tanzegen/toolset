@@ -139,6 +139,27 @@ export interface LocalIpResult {
   interfaces: IfaceAddr[];
 }
 
+export interface PasswordResult {
+  passwords: string[];
+  pool_size: number;
+}
+export interface PasswordOpts {
+  digits: boolean;
+  lower: boolean;
+  upper: boolean;
+  symbols: boolean;
+  length: number;
+  count: number;
+  mustInclude: string;
+  exclude: string;
+  excludeConfusable: boolean;
+}
+
+export interface RsaKeypair {
+  public_pem: string;
+  private_pem: string;
+}
+
 export const api = {
   timestampConvert: (input: string, unit: string, tz: string) =>
     invoke<TimestampResult>("timestamp_convert", { input, unit, tz }),
@@ -185,6 +206,19 @@ export const api = {
   textDiff: (left: string, right: string) =>
     invoke<DiffResult>("text_diff", { left, right }),
   localIps: () => invoke<LocalIpResult>("local_ips"),
+  generatePassword: (o: PasswordOpts) =>
+    invoke<PasswordResult>("generate_password", { ...o }),
+  cryptoProcess: (
+    algo: string,
+    direction: string,
+    keyMode: string,
+    key: string,
+    input: string,
+  ) => invoke<string>("crypto_process", { algo, direction, keyMode, key, input }),
+  rsaGenerate: (bits: number) =>
+    invoke<RsaKeypair>("rsa_generate", { bits }),
+  zhConvert: (text: string, target: string) =>
+    invoke<string>("zh_convert", { text, target }),
 };
 
 /** 把 invoke 抛出的错误（后端序列化的字符串）规整为消息文本。 */

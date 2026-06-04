@@ -16,11 +16,14 @@
 | 正则测试器 | 实时匹配、捕获组、替换预览（RE2 语义，flags i/m/s/x） |
 | 命名风格转换 | camel / Pascal / snake / SCREAMING / kebab / Train / Title 互转 |
 | 文本 Diff | 行级 LCS 比较，高亮新增/删除（自实现，无第三方依赖） |
+| 简繁转换 | 词组级简繁/地区词转换（简体/繁体/台湾/香港），基于 MediaWiki + OpenCC 规则 |
 | JSON 转结构 | 递归推断类型，生成 Go struct / TS interface / Rust struct |
 | 子网计算器 | CIDR / IP+掩码解析，网络·广播·可用范围·掩码，IPv4 完整 + IPv6 基本 |
 | 内网 IP | 枚举本机网卡地址与主用出口 IP（纯本地，不联网） |
 | 公网 IP | 检测当前公网出口 IP（回显服务，端点可配置，需联网） |
 | 域名解析 | DoH 查询 A/AAAA/CNAME/MX/TXT/NS（端点可配置，需联网） |
+| 随机密码 | 自定义字符集/长度/数量/必含/排除，默认排除易混淆，CSPRNG 无偏 |
+| 加密 / 解密 | AES-256-GCM/CBC、ChaCha20-Poly1305（口令或原始密钥）+ RSA-OAEP（公私钥、可生成密钥对） |
 | 哈希 / UUID | 文本 MD5 / SHA1 / SHA256 / SHA512，UUID v4 批量生成 |
 
 ## 目录职责

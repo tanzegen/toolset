@@ -5,10 +5,8 @@
   import CopyButton from "../components/CopyButton.svelte";
   import { cls } from "../ui";
 
-  let tool = $state("base64");
-  let direction = $state("encode");
-  let variant = $state("standard"); // base64: standard / urlsafe
-  let input = $state("Hello, 世界");
+  let target = $state("hant");
+  let input = $state("简繁转换：电脑、软件、网络、内存、里程、皇后");
   let output = $state("");
   let error = $state("");
   let seq = 0;
@@ -16,24 +14,12 @@
   async function run() {
     const id = ++seq;
     error = "";
-    if (!input) {
+    if (!input.trim()) {
       output = "";
       return;
     }
     try {
-      let r: string;
-      const urlSafe = variant === "urlsafe";
-      if (tool === "base64") {
-        r =
-          direction === "encode"
-            ? await api.base64Encode(input, urlSafe)
-            : await api.base64Decode(input, urlSafe);
-      } else {
-        r =
-          direction === "encode"
-            ? await api.urlEncode(input)
-            : await api.urlDecode(input);
-      }
+      const r = await api.zhConvert(input, target);
       if (id === seq) output = r;
     } catch (e) {
       if (id === seq) {
@@ -44,39 +30,27 @@
   }
 
   $effect(() => {
-    void [tool, direction, variant, input];
+    void [input, target];
     run();
   });
 </script>
 
 <ToolPanel
-  title="Base64 / URL 编解码"
-  description="Base64（标准 / URL-safe）与 URL 百分号编解码，全 UTF-8。"
+  title="简繁转换"
+  description="基于 MediaWiki + OpenCC 规则的词组级简繁/地区词转换；选择目标变体即可（自动判断来源）。"
 >
   <div class="mb-3 flex flex-wrap items-center gap-3">
+    <span class="{cls.label} w-14 shrink-0">转换为</span>
     <SegmentedControl
-      bind:value={tool}
+      bind:value={target}
       options={[
-        { label: "Base64", value: "base64" },
-        { label: "URL", value: "url" },
+        { label: "简体", value: "hans" },
+        { label: "繁体", value: "hant" },
+        { label: "台湾正体", value: "tw" },
+        { label: "香港繁体", value: "hk" },
+        { label: "大陆简体", value: "cn" },
       ]}
     />
-    <SegmentedControl
-      bind:value={direction}
-      options={[
-        { label: "编码", value: "encode" },
-        { label: "解码", value: "decode" },
-      ]}
-    />
-    {#if tool === "base64"}
-      <SegmentedControl
-        bind:value={variant}
-        options={[
-          { label: "标准", value: "standard" },
-          { label: "URL-safe", value: "urlsafe" },
-        ]}
-      />
-    {/if}
   </div>
 
   {#if error}
@@ -91,7 +65,7 @@
       <textarea
         bind:value={input}
         spellcheck="false"
-        class="{cls.field} h-64 resize-none font-mono leading-relaxed"
+        class="{cls.field} h-72 resize-none leading-relaxed"
       ></textarea>
     </div>
     <div>
@@ -103,7 +77,7 @@
         value={output}
         readonly
         spellcheck="false"
-        class="{cls.field} h-64 resize-none bg-slate-50 font-mono leading-relaxed dark:bg-slate-900/60"
+        class="{cls.field} h-72 resize-none bg-slate-50 leading-relaxed dark:bg-slate-900/60"
       ></textarea>
     </div>
   </div>

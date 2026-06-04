@@ -1,6 +1,6 @@
 [package]
 name = "toolset"
-version = "0.1.0"
+version = "0.2.0"
 description = "开发者工具集（Windows 桌面端）"
 authors = ["you"]
 edition = "2021"
@@ -29,3 +29,15 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# RSA 生成密钥靠大数运算，dev(debug) 下极慢。仅给这些重计算依赖开满优化，
+# 主体仍保持快速增量编译，让 dev 下生成密钥对接近 release 速度。
+[profile.dev.package.num-bigint-dig]
+opt-level = 3
+
+[profile.dev.package.rsa]
+opt-level = 3
+
+[profile.dev.package.rand]
+opt-level = 3
+

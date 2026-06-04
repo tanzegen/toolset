@@ -2,19 +2,21 @@
 //! 所有计算逻辑与单测都在 toolset-core，本层只做参数透传与命令注册。
 
 use toolset_core::cron::CronResult;
+use toolset_core::crypto::RsaKeypair;
 use toolset_core::error::AppResult;
 use toolset_core::hashing::HashResult;
 use toolset_core::json::JsonValidateResult;
 use toolset_core::localip::LocalIpResult;
 use toolset_core::naming::CaseResult;
 use toolset_core::numeric::{BaseResult, FloatResult};
+use toolset_core::password::PasswordResult;
 use toolset_core::regextool::RegexResult;
 use toolset_core::subnet::SubnetResult;
 use toolset_core::textdiff::DiffResult;
 use toolset_core::timestamp::TimestampResult;
 use toolset_core::{
-    cron, encoding, hashing, json, jsonstruct, localip, naming, numeric, regextool, subnet,
-    textdiff, timestamp,
+    crypto, cron, encoding, hashing, json, jsonstruct, localip, naming, numeric, password,
+    regextool, subnet, textdiff, timestamp, zhconvert,
 };
 
 #[tauri::command]
@@ -137,6 +139,53 @@ fn local_ips() -> AppResult<LocalIpResult> {
     localip::local_ips()
 }
 
+#[allow(clippy::too_many_arguments)]
+#[tauri::command]
+fn generate_password(
+    digits: bool,
+    lower: bool,
+    upper: bool,
+    symbols: bool,
+    length: u32,
+    count: u32,
+    must_include: String,
+    exclude: String,
+    exclude_confusable: bool,
+) -> AppResult<PasswordResult> {
+    password::generate_password(
+        digits,
+        lower,
+        upper,
+        symbols,
+        length as usize,
+        count as usize,
+        must_include,
+        exclude,
+        exclude_confusable,
+    )
+}
+
+#[tauri::command]
+fn crypto_process(
+    algo: String,
+    direction: String,
+    key_mode: String,
+    key: String,
+    input: String,
+) -> AppResult<String> {
+    crypto::crypto_process(algo, direction, key_mode, key, input)
+}
+
+#[tauri::command]
+fn rsa_generate(bits: u32) -> AppResult<RsaKeypair> {
+    crypto::rsa_generate(bits)
+}
+
+#[tauri::command]
+fn zh_convert(text: String, target: String) -> AppResult<String> {
+    zhconvert::zh_convert(text, target)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // 降低 WebView2 内存占用：单渲染进程、关闭独立 GPU 进程、裁剪 Edge 专有特性。
@@ -172,6 +221,10 @@ pub fn run() {
             convert_case,
             text_diff,
             local_ips,
+            generate_password,
+            crypto_process,
+            rsa_generate,
+            zh_convert,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -9,11 +9,15 @@ import Encoding from "./tools/Encoding.svelte";
 import Regex from "./tools/Regex.svelte";
 import Naming from "./tools/Naming.svelte";
 import TextDiff from "./tools/TextDiff.svelte";
+import ZhConvert from "./tools/ZhConvert.svelte";
 import JsonStruct from "./tools/JsonStruct.svelte";
 import Subnet from "./tools/Subnet.svelte";
 import LocalIp from "./tools/LocalIp.svelte";
 import PublicIp from "./tools/PublicIp.svelte";
 import DnsLookup from "./tools/DnsLookup.svelte";
+import Password from "./tools/Password.svelte";
+import Crypto from "./tools/Crypto.svelte";
+import RsaKeys from "./tools/RsaKeys.svelte";
 import Hashing from "./tools/Hashing.svelte";
 
 export interface ToolDef {
@@ -99,6 +103,14 @@ export const tools: ToolDef[] = [
     component: TextDiff,
   },
   {
+    id: "zhconvert",
+    name: "简繁转换",
+    desc: "词组级简繁/地区词转换（简体/繁体/台湾/香港）。",
+    category: "文本",
+    icon: "languages",
+    component: ZhConvert,
+  },
+  {
     id: "jsonstruct",
     name: "JSON 转结构",
     desc: "JSON 推断类型，生成 Go / TS / Rust 结构。",
@@ -137,6 +149,30 @@ export const tools: ToolDef[] = [
     category: "网络",
     icon: "server",
     component: DnsLookup,
+  },
+  {
+    id: "password",
+    name: "随机密码",
+    desc: "自定义字符集/长度/数量/必含/排除，默认排除易混淆字符。",
+    category: "安全",
+    icon: "shuffle",
+    component: Password,
+  },
+  {
+    id: "crypto",
+    name: "加密 / 解密",
+    desc: "AES-256-GCM/CBC、ChaCha20-Poly1305、RSA-OAEP，加解密。",
+    category: "安全",
+    icon: "lock",
+    component: Crypto,
+  },
+  {
+    id: "rsa-keys",
+    name: "RSA 密钥对",
+    desc: "生成 RSA 公私钥对（2048/3072/4096），PEM 可复制。",
+    category: "安全",
+    icon: "key",
+    component: RsaKeys,
   },
   {
     id: "hashing",

@@ -60,7 +60,7 @@
 
   <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
     <div>
-      <div class="{cls.label} mb-1">JSON 输入</div>
+      <div class="mb-1 flex h-7 items-center"><span class={cls.label}>JSON 输入</span></div>
       <textarea
         bind:value={json}
         spellcheck="false"
@@ -68,7 +68,7 @@
       ></textarea>
     </div>
     <div>
-      <div class="mb-1 flex items-center justify-between">
+      <div class="mb-1 flex h-7 items-center justify-between">
         <span class={cls.label}>结构输出</span>
         {#if output}<CopyButton text={output} />{/if}
       </div>

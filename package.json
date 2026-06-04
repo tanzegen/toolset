@@ -1,6 +1,6 @@
 {
   "name": "toolset",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "开发者工具集（Windows 桌面端）",
   "type": "module",
   "scripts": {
