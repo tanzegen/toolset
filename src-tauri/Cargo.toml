@@ -20,7 +20,21 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-clipboard-manager = "2"
+tauri-plugin-dialog = "2"
 toolset-core = { path = "core" }
+
+# SSH 终端工具（有状态、异步、长连接）：会话管理放本层，不进 core。
+# 关键：russh 默认 crypto 后端是 aws-lc-rs（要 NASM/MSVC），这里改用纯 ring 后端，
+# 保留 rsa（RSA 私钥认证）与 flate2（压缩），以契合 GNU 工具链、避免 NASM。
+russh = { version = "0.61", default-features = false, features = ["ring", "rsa", "flate2"] }
+russh-sftp = "2.3"
+dashmap = "6"
+tokio = { version = "1", features = ["macros", "sync", "rt", "net", "io-util", "time"] }
+uuid = { version = "1", features = ["v4"] }
+zeroize = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
 
 # 体积/内存优化：压小 release 二进制
 [profile.release]
@@ -39,5 +53,13 @@ opt-level = 3
 opt-level = 3
 
 [profile.dev.package.rand]
+opt-level = 3
+
+# 主密码解锁靠 Argon2id（默认 64MiB/t=3，本就刻意慢）。dev(debug) 下未优化要好几秒，
+# 给 argon2 与其内核 blake2 开满优化，解锁回到 release 量级（约几百毫秒）。
+[profile.dev.package.argon2]
+opt-level = 3
+
+[profile.dev.package.blake2]
 opt-level = 3
 

@@ -30,3 +30,5 @@ rsa = { version = "0.9", features = ["pem"] }
 rand = "0.8"
 hex = "0.4"
 zhconv = "0.4"
+# SSH 工具的凭据保险箱：Argon2id 派生密钥（字段级 AES-GCM 复用上面的 aes-gcm）
+argon2 = "0.5"

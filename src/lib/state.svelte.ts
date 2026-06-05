@@ -13,9 +13,30 @@ function initialTheme(): Theme {
   return "dark";
 }
 
+function initialPinned(): string[] {
+  if (typeof localStorage !== "undefined") {
+    try {
+      const s = localStorage.getItem("toolset-pinned");
+      if (s) return JSON.parse(s) as string[];
+    } catch {
+      // 损坏忽略
+    }
+  }
+  return [];
+}
+
+function initialCollapsed(): boolean {
+  if (typeof localStorage !== "undefined") {
+    return localStorage.getItem("toolset-sidebar") === "collapsed";
+  }
+  return false;
+}
+
 export const appState = $state({
   activeTool: "timestamp",
   theme: initialTheme() as Theme,
+  pinned: initialPinned(),
+  sidebarCollapsed: initialCollapsed(),
 });
 
 export function setTheme(t: Theme) {
@@ -25,4 +46,22 @@ export function setTheme(t: Theme) {
 
 export function toggleTheme() {
   setTheme(appState.theme === "dark" ? "light" : "dark");
+}
+
+/** 固定/取消固定一个工具（持久化）。 */
+export function togglePin(id: string) {
+  const i = appState.pinned.indexOf(id);
+  if (i >= 0) appState.pinned.splice(i, 1);
+  else appState.pinned.push(id);
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem("toolset-pinned", JSON.stringify(appState.pinned));
+  }
+}
+
+/** 展开/收起侧边栏（持久化）。 */
+export function toggleSidebar() {
+  appState.sidebarCollapsed = !appState.sidebarCollapsed;
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem("toolset-sidebar", appState.sidebarCollapsed ? "collapsed" : "expanded");
+  }
 }

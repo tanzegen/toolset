@@ -1,5 +1,7 @@
 //! Tauri 接入层：把 toolset-core 的纯函数包成 #[tauri::command] 并注册。
-//! 所有计算逻辑与单测都在 toolset-core，本层只做参数透传与命令注册。
+//! 多数工具是无状态纯函数透传；SSH 终端是有状态工具，独立在 `ssh` 模块。
+
+mod ssh;
 
 use toolset_core::cron::CronResult;
 use toolset_core::crypto::RsaKeypair;
@@ -197,6 +199,14 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            use tauri::Manager;
+            // 连接配置落在应用配置目录（不进仓库）。
+            let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+            app.manage(ssh::SshState::new(dir.join("connections.json")));
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             timestamp_convert,
             timestamp_from_datetime,
@@ -225,6 +235,34 @@ pub fn run() {
             crypto_process,
             rsa_generate,
             zh_convert,
+            // —— SSH 终端工具 ——
+            ssh::commands::ssh_vault_status,
+            ssh::commands::ssh_vault_set_master,
+            ssh::commands::ssh_vault_unlock,
+            ssh::commands::ssh_vault_lock,
+            ssh::commands::ssh_vault_reset,
+            ssh::commands::ssh_conn_list,
+            ssh::commands::ssh_conn_save,
+            ssh::commands::ssh_conn_delete,
+            ssh::commands::ssh_conn_clone,
+            ssh::commands::ssh_conn_export,
+            ssh::commands::ssh_conn_import,
+            ssh::commands::ssh_connect,
+            ssh::commands::ssh_write,
+            ssh::commands::ssh_resize,
+            ssh::commands::ssh_close,
+            // —— SFTP 文件传输 ——
+            ssh::sftp::sftp_open,
+            ssh::sftp::sftp_home,
+            ssh::sftp::sftp_list,
+            ssh::sftp::sftp_mkdir,
+            ssh::sftp::sftp_remove,
+            ssh::sftp::sftp_rmdir,
+            ssh::sftp::sftp_rename,
+            ssh::sftp::sftp_download,
+            ssh::sftp::sftp_upload,
+            ssh::sftp::sftp_upload_bytes,
+            ssh::sftp::sftp_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

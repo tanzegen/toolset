@@ -17,6 +17,7 @@ import PublicIp from "./tools/PublicIp.svelte";
 import DnsLookup from "./tools/DnsLookup.svelte";
 import Password from "./tools/Password.svelte";
 import Crypto from "./tools/Crypto.svelte";
+import SshTerminal from "./tools/SshTerminal.svelte";
 import RsaKeys from "./tools/RsaKeys.svelte";
 import Hashing from "./tools/Hashing.svelte";
 
@@ -149,6 +150,14 @@ export const tools: ToolDef[] = [
     category: "网络",
     icon: "server",
     component: DnsLookup,
+  },
+  {
+    id: "ssh",
+    name: "SSH 终端",
+    desc: "连接管理（分组/克隆/导入导出）+ 交互式终端，密码/私钥主密码加密。",
+    category: "网络",
+    icon: "terminal",
+    component: SshTerminal,
   },
   {
     id: "password",
