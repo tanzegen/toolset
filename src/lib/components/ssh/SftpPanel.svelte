@@ -14,6 +14,7 @@
   let sftpId = "";
   let cwd = $state("/");
   let pathInput = $state("/"); // 地址栏可编辑内容；导航成功后同步为 cwd
+  let pathInputEl = $state<HTMLInputElement>();
   let entries = $state<SftpEntry[]>([]);
   let loading = $state(false);
   let error = $state("");
@@ -75,7 +76,12 @@
     }
   }
 
-  onMount(init);
+  onMount(() => {
+    init();
+    // 聚焦地址栏：避免焦点停留在打开本面板的「文件」按钮上——否则按回车会激活该按钮、
+    // 又开一个 SFTP 标签（用户报告的“输入无效 + 开新标签”正是此因）。
+    setTimeout(() => pathInputEl?.focus(), 0);
+  });
   onDestroy(() => {
     if (sftpId) ssh.sftpClose(sftpId);
   });
@@ -194,6 +200,7 @@
     <button class="{cls.btn} px-2 py-1" title="刷新" onclick={() => list(cwd)}><Icon name="refresh" size={14} /></button>
     <input
       class="{cls.field} flex-1 font-mono text-xs"
+      bind:this={pathInputEl}
       bind:value={pathInput}
       placeholder="输入路径后回车或点「前往」，在本面板内跳转"
       onkeydown={(e) => {

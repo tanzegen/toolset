@@ -30,7 +30,13 @@
   };
   let tabs = $state<Tab[]>([]);
   let activeKey = $state("");
-  let fontSize = $state(13);
+  let fontSize = $state(
+    (typeof localStorage !== "undefined" && Number(localStorage.getItem("ssh-font-size"))) || 13,
+  );
+  function setFont(n: number) {
+    fontSize = Math.max(9, Math.min(22, n));
+    if (typeof localStorage !== "undefined") localStorage.setItem("ssh-font-size", String(fontSize));
+  }
   const activeTab = $derived(tabs.find((t) => t.key === activeKey));
 
   // 连接列表收起/展开（持久化）
@@ -221,6 +227,9 @@
   // 全局快捷键（仅当 SSH 工具可见时生效）
   function onKey(e: KeyboardEvent) {
     if (appState.activeTool !== "ssh") return;
+    // 正在输入框/文本域里打字时，不触发全局快捷键
+    const el = e.target as HTMLElement | null;
+    if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
     if (e.ctrlKey && e.shiftKey && (e.key === "T" || e.key === "t")) {
       e.preventDefault();
       const t = tabs.find((x) => x.key === activeKey);
@@ -385,10 +394,8 @@
       </div>
       {#if activeTab?.kind === "term"}
         <button class="{cls.btn} px-2 py-1 text-xs" onclick={reloginActive} title="重新登录 (Ctrl+Shift+R)">重连</button>
-        <div class="flex items-center gap-1 text-xs text-slate-400">
-          <button class="{cls.btn} px-1.5 py-0.5" onclick={() => (fontSize = Math.max(9, fontSize - 1))}>A-</button>
-          <button class="{cls.btn} px-1.5 py-0.5" onclick={() => (fontSize = Math.min(22, fontSize + 1))}>A+</button>
-        </div>
+        <button class="{cls.btn} px-2 py-1 text-xs" onclick={() => setFont(fontSize - 1)} title="减小字号">A-</button>
+        <button class="{cls.btn} px-2 py-1 text-xs" onclick={() => setFont(fontSize + 1)} title="增大字号">A+</button>
       {/if}
     </div>
 

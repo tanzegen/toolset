@@ -185,10 +185,12 @@
     if (active && term) term.focus();
   });
 
-  // 字号变化即时生效
+  // 字号变化即时生效。无条件先读 fontSize 以确保被追踪——
+  // 否则首次运行时 term 尚未创建，fontSize 不会被登记为依赖，后续改动不触发重跑。
   $effect(() => {
+    const fs = fontSize;
     if (term) {
-      term.options.fontSize = fontSize;
+      term.options.fontSize = fs;
       fit?.fit();
       if (sessionId) ssh.resize(sessionId, term.cols, term.rows);
     }
