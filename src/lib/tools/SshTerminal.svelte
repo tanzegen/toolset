@@ -7,6 +7,7 @@
   import TermView from "../components/ssh/TermView.svelte";
   import SftpPanel from "../components/ssh/SftpPanel.svelte";
   import ConnForm from "../components/ssh/ConnForm.svelte";
+  import ContextMenu from "../components/ssh/ContextMenu.svelte";
   import {
     ssh,
     type ConnList,
@@ -19,6 +20,28 @@
   let vault = $state<VaultStatus>({ hasMaster: false, unlocked: false });
   let list = $state<ConnList>({ groups: [], connections: [] });
   let toast = $state("");
+
+  // 连接列表：搜索、分组折叠、右键菜单
+  type MenuItem = { label: string; icon?: string; danger?: boolean; onclick: () => void };
+  let connQuery = $state("");
+  let collapsedGroups = $state<string[]>(loadCollapsedGroups());
+  let menu = $state<{ x: number; y: number; items: MenuItem[] } | null>(null);
+
+  function loadCollapsedGroups(): string[] {
+    if (typeof localStorage === "undefined") return [];
+    try {
+      return JSON.parse(localStorage.getItem("ssh-collapsed-groups") || "[]") as string[];
+    } catch {
+      return [];
+    }
+  }
+  function toggleGroup(g: string) {
+    const i = collapsedGroups.indexOf(g);
+    if (i >= 0) collapsedGroups.splice(i, 1);
+    else collapsedGroups.push(g);
+    if (typeof localStorage !== "undefined")
+      localStorage.setItem("ssh-collapsed-groups", JSON.stringify(collapsedGroups));
+  }
 
   type Tab = {
     key: string;
@@ -82,16 +105,19 @@
     await Promise.all([refreshVault(), refreshList()]);
   });
 
-  // 按分组聚合（无分组归入「未分组」）
+  // 按分组聚合（无分组归入「未分组」），并按搜索词过滤
   const grouped = $derived.by(() => {
+    const q = connQuery.trim().toLowerCase();
     const map = new Map<string, ConnView[]>();
     for (const c of list.connections) {
+      if (q && !`${c.name} ${c.host} ${c.username} ${c.group}`.toLowerCase().includes(q)) continue;
       const g = c.group || "未分组";
       if (!map.has(g)) map.set(g, []);
       map.get(g)!.push(c);
     }
     return [...map.entries()];
   });
+  const searching = $derived(connQuery.trim().length > 0);
 
   function openPw(mode: PwMode, path?: string) {
     pw = { mode, error: "", path };
@@ -171,6 +197,40 @@
     if (t) t.relogin++;
   }
 
+  // 右键菜单：连接行 / 标签
+  function openConnMenu(e: MouseEvent, c: ConnView) {
+    e.preventDefault();
+    e.stopPropagation();
+    menu = {
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        { label: "连接（终端）", icon: "terminal", onclick: () => openTab(c) },
+        { label: "打开 SFTP", icon: "folder", onclick: () => openTab(c, "sftp") },
+        { label: "编辑", icon: "pencil", onclick: () => editConn(c) },
+        { label: "克隆", icon: "copy", onclick: () => cloneConn(c) },
+        { label: "删除", icon: "trash", danger: true, onclick: () => delConn(c) },
+      ],
+    };
+  }
+  function openTabMenu(e: MouseEvent, t: Tab) {
+    e.preventDefault();
+    e.stopPropagation();
+    menu = {
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        { label: "克隆标签", icon: "copy", onclick: () => cloneTab(t) },
+        { label: t.kind === "sftp" ? "刷新" : "重连", icon: "refresh", onclick: () => t.relogin++ },
+        { label: "关闭", icon: "trash", danger: true, onclick: () => closeTab(t.key) },
+      ],
+    };
+  }
+  function cloneTab(t: Tab) {
+    const c = list.connections.find((x) => x.id === t.connId);
+    if (c) openTab(c, t.kind);
+  }
+
   function newConn() {
     editingConn = null;
     showForm = true;
@@ -227,15 +287,24 @@
   // 全局快捷键（仅当 SSH 工具可见时生效）
   function onKey(e: KeyboardEvent) {
     if (appState.activeTool !== "ssh") return;
-    // 正在输入框/文本域里打字时，不触发全局快捷键
+    // 在真正的表单输入框里打字时不触发；但终端（xterm 的 helper textarea）要放行，
+    // 否则焦点在终端里时 Ctrl+Shift+T/R 会被误挡。
     const el = e.target as HTMLElement | null;
-    if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
-    if (e.ctrlKey && e.shiftKey && (e.key === "T" || e.key === "t")) {
+    const typing =
+      !!el &&
+      (el.tagName === "INPUT" ||
+        el.isContentEditable ||
+        (el.tagName === "TEXTAREA" && !el.classList.contains("xterm-helper-textarea")));
+    if (typing) return;
+    if (!e.ctrlKey || !e.shiftKey) return;
+    const k = e.key.toLowerCase();
+    if (k === "t") {
       e.preventDefault();
       const t = tabs.find((x) => x.key === activeKey);
       const c = t && list.connections.find((x) => x.id === t.connId);
       if (c) openTab(c, t?.kind ?? "term");
-    } else if (e.ctrlKey && e.shiftKey && (e.key === "R" || e.key === "r")) {
+      else if (list.connections.length > 0) openTab(list.connections[0]); // 空状态：打开第一个服务器
+    } else if (k === "r") {
       e.preventDefault();
       reloginActive();
     }
@@ -341,28 +410,56 @@
       <button class="{cls.btn} px-2 py-1.5 text-xs" onclick={doExport} title="导出">导出</button>
     </div>
 
+    <!-- 搜索 -->
+    <div class="px-3 pb-1">
+      <div class="relative">
+        <span class="pointer-events-none absolute left-2 top-1.5 text-slate-400"><Icon name="search" size={13} /></span>
+        <input
+          bind:value={connQuery}
+          placeholder="搜索连接…"
+          class="w-full rounded-md border border-slate-200 bg-white py-1 pl-7 pr-2 text-xs outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        />
+      </div>
+    </div>
+
     <div class="flex-1 overflow-y-auto px-2 pb-3">
       {#each grouped as [g, conns] (g)}
+        {@const expanded = searching || !collapsedGroups.includes(g)}
         <div class="mt-2">
-          <div class="px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">{g}</div>
-          {#each conns as c (c.id)}
-            <div class="group flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800/60">
-              <button class="min-w-0 flex-1 text-left" onclick={() => openTab(c)} title="连接">
-                <div class="truncate text-sm text-slate-700 dark:text-slate-200">{c.name || c.host}</div>
-                <div class="truncate font-mono text-[11px] text-slate-400">{c.username}@{c.host}:{c.port}</div>
-              </button>
-              <div class="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
-                <button class="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-700" title="文件 (SFTP)" onclick={() => openTab(c, "sftp")}><Icon name="folder" size={13} /></button>
-                <button class="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-700" title="编辑" onclick={() => editConn(c)}><Icon name="pencil" size={13} /></button>
-                <button class="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-700" title="克隆" onclick={() => cloneConn(c)}><Icon name="copy" size={13} /></button>
-                <button class="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-700" title="删除" onclick={() => delConn(c)}><Icon name="trash" size={13} /></button>
+          <button
+            class="flex w-full items-center gap-1 rounded px-1.5 py-1 text-[11px] font-medium uppercase tracking-wide text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+            onclick={() => toggleGroup(g)}
+            title="折叠 / 展开分组"
+          >
+            <Icon name="chevron-left" size={12} class="shrink-0 transition {expanded ? '-rotate-90' : 'rotate-180'}" />
+            <span class="truncate">{g}</span>
+            <span class="ml-auto text-slate-400">{conns.length}</span>
+          </button>
+          {#if expanded}
+            {#each conns as c (c.id)}
+              <div
+                class="group flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                oncontextmenu={(e) => openConnMenu(e, c)}
+              >
+                <button class="min-w-0 flex-1 text-left" onclick={() => openTab(c)} title="连接（右键更多操作）">
+                  <div class="truncate text-sm text-slate-700 dark:text-slate-200">{c.name || c.host}</div>
+                  <div class="truncate font-mono text-[11px] text-slate-400">{c.username}@{c.host}:{c.port}</div>
+                </button>
+                <div class="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                  <button class="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-700" title="文件 (SFTP)" onclick={() => openTab(c, "sftp")}><Icon name="folder" size={13} /></button>
+                  <button class="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-700" title="编辑" onclick={() => editConn(c)}><Icon name="pencil" size={13} /></button>
+                  <button class="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-700" title="克隆" onclick={() => cloneConn(c)}><Icon name="copy" size={13} /></button>
+                  <button class="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-700" title="删除" onclick={() => delConn(c)}><Icon name="trash" size={13} /></button>
+                </div>
               </div>
-            </div>
-          {/each}
+            {/each}
+          {/if}
         </div>
       {/each}
       {#if list.connections.length === 0}
         <p class="px-3 py-6 text-center text-xs text-slate-400">还没有连接，点「＋ 新建」</p>
+      {:else if grouped.length === 0}
+        <p class="px-3 py-6 text-center text-xs text-slate-400">无匹配连接</p>
       {/if}
     </div>
   </aside>
@@ -377,6 +474,7 @@
             class="flex shrink-0 items-center gap-1.5 rounded-t-lg border-b-2 px-3 py-1 text-xs {activeKey === t.key
               ? 'border-indigo-500 bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
               : 'border-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'}"
+            oncontextmenu={(e) => openTabMenu(e, t)}
           >
             <button onclick={() => (activeKey = t.key)} class="flex items-center gap-1.5">
               <span
@@ -419,13 +517,17 @@
         </div>
       {/each}
       {#if tabs.length === 0}
-        <div class="flex h-full items-center justify-center text-sm text-slate-500">
+        <div class="flex h-full items-center justify-center px-6 text-center text-sm text-slate-500">
           从左侧选择一个连接开始（Ctrl+Shift+T 新标签 · Ctrl+Shift+R 重连）
         </div>
       {/if}
     </div>
   </section>
 </div>
+
+{#if menu}
+  <ContextMenu x={menu.x} y={menu.y} items={menu.items} onclose={() => (menu = null)} />
+{/if}
 
 {#if showForm}
   <ConnForm conn={editingConn} groups={list.groups} onsave={saveConn} oncancel={() => (showForm = false)} />
@@ -434,7 +536,7 @@
 {#if pw}
   <div class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" role="presentation" onclick={() => (pw = null)}>
     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-    <div class="{cls.card} w-full max-w-sm p-5 shadow-xl" onclick={(e) => e.stopPropagation()}>
+    <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900" onclick={(e) => e.stopPropagation()}>
       <h2 class="mb-1 text-base font-semibold text-slate-800 dark:text-slate-100">
         {pw.mode === "set" ? "设置主密码" : pw.mode === "unlock" ? "解锁主密码" : pw.mode === "reset" ? "重置主密码" : "导入：源文件主密码"}
       </h2>

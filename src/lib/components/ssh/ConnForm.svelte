@@ -53,7 +53,7 @@
 <div class="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4" role="presentation" onclick={oncancel}>
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
   <div
-    class="{cls.card} max-h-[90vh] w-full max-w-lg overflow-y-auto p-5 shadow-xl"
+    class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
     onclick={(e) => e.stopPropagation()}
   >
     <h2 class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100">

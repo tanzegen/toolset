@@ -253,12 +253,14 @@
     });
 
     ro = new ResizeObserver(() => {
+      // 标签隐藏时容器尺寸为 0：跳过，避免把远端 PTY 缩到 0×0、切回来产生重绘乱码
+      if (!host || host.offsetWidth === 0 || host.offsetHeight === 0) return;
       try {
         fit?.fit();
         if (term) trzsz?.setTerminalColumns(term.cols);
         if (sessionId && term) ssh.resize(sessionId, term.cols, term.rows);
       } catch {
-        // 容器临时为 0 尺寸（被隐藏）时忽略
+        // 忽略瞬时异常
       }
     });
     ro.observe(host!);
