@@ -6,6 +6,7 @@
   import ResultRow from "../components/ResultRow.svelte";
   import TzSelect from "../components/TzSelect.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let mode = $state<string>("epoch");
   let input = $state("");
@@ -16,6 +17,17 @@
   let error = $state("");
   let seq = 0;
 
+  const restored = persist("timestamp", {
+    save: () => ({ mode, input, unit, datetime, tz }),
+    load: (s) => {
+      mode = s.mode ?? mode;
+      input = s.input ?? input;
+      unit = s.unit ?? unit;
+      datetime = s.datetime ?? datetime;
+      tz = s.tz ?? tz;
+    },
+  });
+
   const unitLabel: Record<string, string> = {
     s: "秒 (s)",
     ms: "毫秒 (ms)",
@@ -25,6 +37,7 @@
   };
 
   onMount(async () => {
+    if (restored) return; // 已恢复上次内容，不再用“当前时间/本机时区”覆盖
     try {
       tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
     } catch {}

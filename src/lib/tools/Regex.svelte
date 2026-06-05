@@ -3,6 +3,7 @@
   import ToolPanel from "../components/ToolPanel.svelte";
   import SegmentedControl from "../components/SegmentedControl.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let pattern = $state("(\\w+)@(\\w+)\\.(\\w+)");
   let text = $state("联系 alice@example.com 或 bob@test.org");
@@ -15,6 +16,20 @@
   let result = $state<RegexResult | null>(null);
   let error = $state("");
   let seq = 0;
+
+  persist("regex", {
+    save: () => ({ pattern, text, mode, replacement, fi, fm, fs, fx }),
+    load: (s) => {
+      pattern = s.pattern ?? pattern;
+      text = s.text ?? text;
+      mode = s.mode ?? mode;
+      replacement = s.replacement ?? replacement;
+      fi = s.fi ?? fi;
+      fm = s.fm ?? fm;
+      fs = s.fs ?? fs;
+      fx = s.fx ?? fx;
+    },
+  });
 
   const flags = $derived(
     (fi ? "i" : "") + (fm ? "m" : "") + (fs ? "s" : "") + (fx ? "x" : ""),

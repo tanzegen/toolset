@@ -5,6 +5,7 @@
   import CopyButton from "../components/CopyButton.svelte";
   import JsonTree from "../components/JsonTree.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let action = $state("format");
   let indent = $state(2);
@@ -15,6 +16,16 @@
   let error = $state("");
   let treeDepth = $state(2);
   let seq = 0;
+
+  persist("json", {
+    save: () => ({ action, indent, input, treeDepth }),
+    load: (s) => {
+      action = s.action ?? action;
+      indent = s.indent ?? indent;
+      input = s.input ?? input;
+      treeDepth = s.treeDepth ?? treeDepth;
+    },
+  });
 
   // 树视图：前端解析（与格式化/压缩走 Rust 互不影响）
   const parsed = $derived.by(() => {

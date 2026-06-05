@@ -5,6 +5,7 @@
   import CopyButton from "../components/CopyButton.svelte";
   import RsaKeygen from "../components/RsaKeygen.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let algo = $state("aes-cbc");
   let direction = $state("encrypt");
@@ -19,6 +20,17 @@
   let output = $state("");
   let error = $state("");
   let busy = $state(false);
+
+  // 只持久化算法/方向/密钥模式与待处理文本；密钥、密文结果、RSA 私钥等敏感内容不落盘。
+  persist("crypto", {
+    save: () => ({ algo, direction, keyMode, input }),
+    load: (s) => {
+      algo = s.algo ?? algo;
+      direction = s.direction ?? direction;
+      keyMode = s.keyMode ?? keyMode;
+      input = s.input ?? input;
+    },
+  });
 
   const isRsa = $derived(algo === "rsa");
   const encrypting = $derived(direction === "encrypt");

@@ -4,6 +4,7 @@
   import SegmentedControl from "../components/SegmentedControl.svelte";
   import CopyButton from "../components/CopyButton.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let lang = $state("go");
   let rootName = $state("Root");
@@ -11,6 +12,15 @@
   let output = $state("");
   let error = $state("");
   let seq = 0;
+
+  persist("jsonstruct", {
+    save: () => ({ lang, rootName, json }),
+    load: (s) => {
+      lang = s.lang ?? lang;
+      rootName = s.rootName ?? rootName;
+      json = s.json ?? json;
+    },
+  });
 
   async function run() {
     const id = ++seq;

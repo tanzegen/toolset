@@ -4,6 +4,7 @@
   import SegmentedControl from "../components/SegmentedControl.svelte";
   import ResultRow from "../components/ResultRow.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let mode = $state("hex2float");
   let width = $state("auto");
@@ -11,6 +12,15 @@
   let result = $state<FloatResult | null>(null);
   let error = $state("");
   let seq = 0;
+
+  persist("hexfloat", {
+    save: () => ({ mode, width, input }),
+    load: (s) => {
+      mode = s.mode ?? mode;
+      width = s.width ?? width;
+      input = s.input ?? input;
+    },
+  });
 
   async function run() {
     const id = ++seq;

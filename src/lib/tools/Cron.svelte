@@ -4,6 +4,7 @@
   import ToolPanel from "../components/ToolPanel.svelte";
   import TzSelect from "../components/TzSelect.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let expr = $state("0 9 * * 1-5");
   let tz = $state("UTC");
@@ -12,7 +13,17 @@
   let error = $state("");
   let seq = 0;
 
+  const restored = persist("cron", {
+    save: () => ({ expr, tz, count }),
+    load: (s) => {
+      expr = s.expr ?? expr;
+      tz = s.tz ?? tz;
+      count = s.count ?? count;
+    },
+  });
+
   onMount(() => {
+    if (restored) return; // 已恢复上次时区，不再用本机时区覆盖
     try {
       tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
     } catch {}

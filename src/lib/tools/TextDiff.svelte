@@ -2,12 +2,21 @@
   import { api, errMsg, type DiffResult } from "../ipc";
   import ToolPanel from "../components/ToolPanel.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let left = $state("line one\nline two\nline three");
   let right = $state("line one\nline 2\nline three\nline four");
   let result = $state<DiffResult | null>(null);
   let error = $state("");
   let seq = 0;
+
+  persist("diff", {
+    save: () => ({ left, right }),
+    load: (s) => {
+      left = s.left ?? left;
+      right = s.right ?? right;
+    },
+  });
 
   async function run() {
     const id = ++seq;

@@ -3,11 +3,19 @@
   import ToolPanel from "../components/ToolPanel.svelte";
   import ResultRow from "../components/ResultRow.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let input = $state("192.168.1.10/24");
   let result = $state<SubnetResult | null>(null);
   let error = $state("");
   let seq = 0;
+
+  persist("subnet", {
+    save: () => ({ input }),
+    load: (s) => {
+      input = s.input ?? input;
+    },
+  });
 
   async function run() {
     const id = ++seq;

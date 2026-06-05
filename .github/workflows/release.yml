@@ -33,6 +33,18 @@ jobs:
         shell: bash
         run: rm -f .cargo/config.toml
 
+      # 用 git tag（去掉前缀 v）覆盖 app 版本，让安装包文件名跟随 tag。
+      # 自此 tag 即版本号的唯一来源，仓库内 version 字段无需逐次维护。
+      # 仅改 runner 上的工作副本、不回写仓库；手动触发（无 tag）时跳过。
+      - name: Sync app version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          echo "Releasing version $VER"
+          jq --arg v "$VER" '.version=$v' src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
+          jq --arg v "$VER" '.version=$v' package.json > tmp.json && mv tmp.json package.json
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20

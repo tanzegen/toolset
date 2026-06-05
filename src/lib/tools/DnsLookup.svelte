@@ -5,6 +5,7 @@
   import CopyButton from "../components/CopyButton.svelte";
   import ComboBox from "../components/ComboBox.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   // 预设 DoH 端点（均已验证支持 CORS）；首项为默认（阿里，国内快）。
   const DOH_ENDPOINTS = [
@@ -36,6 +37,15 @@
   let records = $state<{ type: string; data: string; ttl: number }[]>([]);
   let err = $state("");
   let loading = $state(false);
+
+  // endpoint 已在下方 onMount/$effect 用 net-doh-endpoint 单独持久化，这里只补 domain/记录类型
+  persist("dns-lookup", {
+    save: () => ({ domain, recordType }),
+    load: (s) => {
+      domain = s.domain ?? domain;
+      recordType = s.recordType ?? recordType;
+    },
+  });
 
   onMount(() => {
     const b = localStorage.getItem("net-doh-endpoint");

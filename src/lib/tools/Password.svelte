@@ -5,6 +5,7 @@
   import ToolPanel from "../components/ToolPanel.svelte";
   import CopyButton from "../components/CopyButton.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let digits = $state(true);
   let lower = $state(true);
@@ -18,6 +19,24 @@
 
   let result = $state<PasswordResult | null>(null);
   let error = $state("");
+
+  // 仅持久化生成选项；生成出来的密码属敏感结果，不落盘（每次进入重新生成）。
+  persist("password", {
+    save: () => ({
+      digits, lower, upper, symbols, length, count, mustInclude, exclude, excludeConfusable,
+    }),
+    load: (s) => {
+      digits = s.digits ?? digits;
+      lower = s.lower ?? lower;
+      upper = s.upper ?? upper;
+      symbols = s.symbols ?? symbols;
+      length = s.length ?? length;
+      count = s.count ?? count;
+      mustInclude = s.mustInclude ?? mustInclude;
+      exclude = s.exclude ?? exclude;
+      excludeConfusable = s.excludeConfusable ?? excludeConfusable;
+    },
+  });
 
   async function gen() {
     error = "";

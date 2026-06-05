@@ -4,6 +4,7 @@
   import SegmentedControl from "../components/SegmentedControl.svelte";
   import ResultRow from "../components/ResultRow.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let input = $state("255");
   let fromBase = $state<number>(10);
@@ -11,6 +12,15 @@
   let result = $state<BaseResult | null>(null);
   let error = $state("");
   let seq = 0;
+
+  persist("base", {
+    save: () => ({ input, fromBase, bitWidth }),
+    load: (s) => {
+      input = s.input ?? input;
+      fromBase = s.fromBase ?? fromBase;
+      bitWidth = s.bitWidth ?? bitWidth;
+    },
+  });
 
   async function run() {
     const id = ++seq;

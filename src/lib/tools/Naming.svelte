@@ -3,11 +3,19 @@
   import ToolPanel from "../components/ToolPanel.svelte";
   import ResultRow from "../components/ResultRow.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let input = $state("user_profile_id");
   let result = $state<CaseResult | null>(null);
   let error = $state("");
   let seq = 0;
+
+  persist("naming", {
+    save: () => ({ input }),
+    load: (s) => {
+      input = s.input ?? input;
+    },
+  });
 
   async function run() {
     const id = ++seq;

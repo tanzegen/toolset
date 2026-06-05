@@ -4,6 +4,7 @@
   import SegmentedControl from "../components/SegmentedControl.svelte";
   import CopyButton from "../components/CopyButton.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let tool = $state("base64");
   let direction = $state("encode");
@@ -12,6 +13,16 @@
   let output = $state("");
   let error = $state("");
   let seq = 0;
+
+  persist("encoding", {
+    save: () => ({ tool, direction, variant, input }),
+    load: (s) => {
+      tool = s.tool ?? tool;
+      direction = s.direction ?? direction;
+      variant = s.variant ?? variant;
+      input = s.input ?? input;
+    },
+  });
 
   async function run() {
     const id = ++seq;

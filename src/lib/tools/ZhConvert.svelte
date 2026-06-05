@@ -4,12 +4,21 @@
   import SegmentedControl from "../components/SegmentedControl.svelte";
   import CopyButton from "../components/CopyButton.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let target = $state("hant");
   let input = $state("简繁转换：电脑、软件、网络、内存、里程、皇后");
   let output = $state("");
   let error = $state("");
   let seq = 0;
+
+  persist("zhconvert", {
+    save: () => ({ target, input }),
+    load: (s) => {
+      target = s.target ?? target;
+      input = s.input ?? input;
+    },
+  });
 
   async function run() {
     const id = ++seq;

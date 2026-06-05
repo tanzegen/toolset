@@ -6,6 +6,7 @@
   import ResultRow from "../components/ResultRow.svelte";
   import CopyButton from "../components/CopyButton.svelte";
   import { cls } from "../ui";
+  import { persist } from "../persist.svelte";
 
   let tool = $state("hash");
 
@@ -32,6 +33,16 @@
   let count = $state(5);
   let uuids = $state<string[]>([]);
   let error = $state("");
+
+  // 持久化当前子工具、待哈希文本与 UUID 数量；UUID 结果属生成内容，不落盘。
+  persist("hashing", {
+    save: () => ({ tool, input, count }),
+    load: (s) => {
+      tool = s.tool ?? tool;
+      input = s.input ?? input;
+      count = s.count ?? count;
+    },
+  });
 
   async function genUuid() {
     error = "";
