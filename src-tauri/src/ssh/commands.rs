@@ -263,13 +263,66 @@ pub fn ssh_conn_clone(state: State<SshState>, id: String) -> AppResult<ConnView>
 
 // ============================ 导入 / 导出 ============================
 
+/// 选择部分连接导出，并可为这份导出**重设主密码**。
+/// - new_master 为 Some(非空)：用新主密码重新加密选中连接的密码类字段（需当前 vault 已解锁
+///   以解密原密文），导出文件自带新 KDF/校验块，导入端用新主密码即可恢复。
+/// - new_master 为 None/空：密文原样带出，导出文件沿用当前 vault 元信息（导入端用**当前**主密码恢复）。
+/// 返回导出的连接条数。
 #[tauri::command]
-pub fn ssh_conn_export(state: State<SshState>, path: String) -> AppResult<()> {
+pub fn ssh_conn_export_selected(
+    state: State<SshState>,
+    ids: Vec<String>,
+    path: String,
+    new_master: Option<String>,
+) -> AppResult<usize> {
     let store = state.store.lock().unwrap();
-    let json = serde_json::to_string_pretty(&*store)
+    let selected: Vec<Connection> = ids.iter().filter_map(|id| store.find(id).cloned()).collect();
+    if selected.is_empty() {
+        return Err(AppError::Invalid("未选择任何连接".into()));
+    }
+
+    // 新主密码 → 新 KDF/校验块/密钥（用于重加密导出内容）。
+    let new_vault = match new_master.as_deref() {
+        Some(pw) if !pw.is_empty() => {
+            let kdf = KdfParams::generate();
+            let key = vault::derive_key(pw, &kdf)?;
+            let verifier = vault::make_verifier(&key)?;
+            Some((key, VaultMeta { kdf, verifier }))
+        }
+        _ => None,
+    };
+    let cur_key = state.key();
+
+    let mut out = toolset_core::sshconfig::Store::default();
+    for src in &selected {
+        let mut c = src.clone();
+        if has_any_secret(&src.secret) {
+            match new_vault.as_ref() {
+                // 重设主密码：把密码从当前密钥重加密到新密钥（AAD 仍用连接 id，导入端据此解密）
+                Some((nk, _)) => match cur_key.as_ref() {
+                    Some(ck) => c.secret = reencrypt(&src.secret, &src.id, ck, &src.id, nk)?,
+                    None => return Err(AppError::Invalid("__VAULT_LOCKED__".into())),
+                },
+                // 不重设主密码：密文原样带出（导入端用当前主密码恢复）
+                None => {}
+            }
+        }
+        out.ensure_group(&c.group);
+        let hk = host_key(&c.host, c.port);
+        if let Some(fp) = store.known_hosts.get(&hk) {
+            out.known_hosts.insert(hk, fp.clone());
+        }
+        out.connections.push(c);
+    }
+    out.vault = match new_vault {
+        Some((_, meta)) => Some(meta),
+        None => store.vault.clone(),
+    };
+
+    let json = serde_json::to_string_pretty(&out)
         .map_err(|e| AppError::Invalid(format!("序列化失败：{e}")))?;
     std::fs::write(&path, json).map_err(|e| AppError::Invalid(format!("写入失败：{e}")))?;
-    Ok(())
+    Ok(out.connections.len())
 }
 
 #[tauri::command]

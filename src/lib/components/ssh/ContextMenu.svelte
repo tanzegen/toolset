@@ -12,6 +12,19 @@
     items: { label: string; icon?: string; danger?: boolean; onclick: () => void }[];
     onclose: () => void;
   } = $props();
+
+  // 夹取到视口内：靠右/靠下打开时整体左移/上移，避免菜单溢出窗口被裁切点不到。
+  let el = $state<HTMLDivElement>();
+  let px = $state(x);
+  let py = $state(y);
+  $effect(() => {
+    void x;
+    void y;
+    if (!el) return;
+    const m = 8;
+    px = Math.max(m, Math.min(x, window.innerWidth - el.offsetWidth - m));
+    py = Math.max(m, Math.min(y, window.innerHeight - el.offsetHeight - m));
+  });
 </script>
 
 <!-- 点击/右键空白处、Esc、窗口缩放都关闭菜单 -->
@@ -23,8 +36,9 @@
 />
 
 <div
+  bind:this={el}
   class="fixed z-50 min-w-36 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-xl dark:border-slate-700 dark:bg-slate-800"
-  style="left: {x}px; top: {y}px"
+  style="left: {px}px; top: {py}px"
   role="menu"
   tabindex="-1"
 >

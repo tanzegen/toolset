@@ -8,21 +8,30 @@
   import { TrzszFilter } from "trzsz";
   import "@xterm/xterm/css/xterm.css";
   import { ssh, b64ToBytes, VAULT_LOCKED, type SshFrame } from "../../ssh";
+  import { matchAction } from "../../keys.svelte";
 
   let {
     connId,
+    mode = "ssh",
+    shell = "",
     fontSize = 13,
     relogin = 0,
     active = false,
+    searchSignal = 0,
     onstatus,
     onlocked,
+    onexit,
   }: {
     connId: string;
+    mode?: "ssh" | "local";
+    shell?: string;
     fontSize?: number;
     relogin?: number;
     active?: boolean;
+    searchSignal?: number;
     onstatus?: (s: string) => void;
     onlocked?: () => void;
+    onexit?: () => void;
   } = $props();
 
   let host = $state<HTMLDivElement>();
@@ -33,6 +42,7 @@
   let sessionId = "";
   let ro: ResizeObserver | undefined;
   let lastRelogin = relogin;
+  let lastSearchSignal = searchSignal;
   let dragging = $state(false);
 
   // 重连 / 退避
@@ -40,6 +50,7 @@
   let disposed = false;
   let backoffStep = 0;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  let pendingConnect = false; // 隐藏(0×0)时挂起，等可见后再连，避免错误尺寸下输出乱码
 
   // 搜索
   let searchOpen = $state(false);
@@ -54,6 +65,16 @@
     if (typeof out === "string" || out instanceof Uint8Array) term?.write(out);
     else if (out instanceof ArrayBuffer) term?.write(new Uint8Array(out));
     else if (out instanceof Blob) out.arrayBuffer().then((ab) => term?.write(new Uint8Array(ab)));
+  }
+
+  // 数据通道：SSH 走 trzsz 过滤器（支持 trz/tsz 文件传输）；本地终端无需 trzsz，直连即可。
+  function feedServer(bytes: Uint8Array) {
+    if (trzsz) trzsz.processServerOutput(bytes);
+    else term?.write(bytes);
+  }
+  function sendInput(data: string) {
+    if (trzsz) trzsz.processTerminalInput(data);
+    else if (sessionId) ssh.write(sessionId, data);
   }
 
   // 拖拽上传：把拖入的文件交给 trzsz（会自动在远端触发 trz）。需在 shell 提示符处拖放。
@@ -84,12 +105,29 @@
     term?.writeln(`\x1b[90m${delay / 1000}s 后自动重连…（点「重连」可立即重试）\x1b[0m`);
     reconnectTimer = setTimeout(() => {
       reconnectTimer = undefined;
-      connect();
+      connectWhenVisible();
     }, delay);
+  }
+
+  function hasSize() {
+    return !!host && host.offsetWidth > 0 && host.offsetHeight > 0;
+  }
+
+  // 隐藏标签的容器尺寸为 0×0，此时连接/重连会让 shell 在错误尺寸下吐出首屏，
+  // 切回来重排即表现为「一小段乱码」。因此隐藏时只挂起，等 ResizeObserver
+  // 观察到非零尺寸（标签被切到/可见）再真正连接。
+  function connectWhenVisible() {
+    if (hasSize()) {
+      fit?.fit();
+      connect();
+    } else {
+      pendingConnect = true;
+    }
   }
 
   async function connect() {
     if (!term || disposed) return;
+    pendingConnect = false;
     const myGen = ++gen;
     setStatus("connecting");
     term.writeln("\x1b[90m正在连接…\x1b[0m");
@@ -97,13 +135,15 @@
     channel.onmessage = (f) => {
       if (myGen !== gen || disposed) return; // 旧会话 / 已销毁，忽略
       if (f.kind === "data") {
-        trzsz?.processServerOutput(b64ToBytes(f.data));
+        feedServer(b64ToBytes(f.data));
       } else if (f.kind === "status") {
         if (f.state === "connected") {
           setStatus("connected");
         } else if (f.state === "exited") {
+          // 用户主动登出（exit / shell 正常退出）→ 关闭当前标签
           setStatus("exited");
-          term!.writeln("\r\n\x1b[90m[会话已结束]\x1b[0m");
+          if (onexit) onexit();
+          else term!.writeln("\r\n\x1b[90m[会话已结束]\x1b[0m");
         } else if (f.state === "closed") {
           term!.writeln("\r\n\x1b[33m[连接已断开]\x1b[0m");
           scheduleReconnect();
@@ -111,7 +151,7 @@
       }
     };
     try {
-      sessionId = await ssh.connect(connId, channel);
+      sessionId = mode === "local" ? await ssh.localOpen(shell, channel) : await ssh.connect(connId, channel);
       backoffStep = 0; // 连上即重置退避
       if (term) ssh.resize(sessionId, term.cols, term.rows);
       if (active) term.focus();
@@ -143,9 +183,13 @@
       sessionId = "";
     }
     term?.reset();
-    await connect();
+    connectWhenVisible();
   }
 
+  function openSearch() {
+    searchOpen = true;
+    setTimeout(() => searchInput?.select(), 0);
+  }
   function toggleSearch() {
     searchOpen = !searchOpen;
     if (searchOpen) setTimeout(() => searchInput?.select(), 0);
@@ -166,7 +210,7 @@
     }
     try {
       const t = await readText();
-      if (t) trzsz?.processTerminalInput(t);
+      if (t) sendInput(t);
     } catch {
       // 剪贴板不可读时忽略
     }
@@ -183,6 +227,14 @@
   // 切到该标签（变为可见）时自动聚焦
   $effect(() => {
     if (active && term) term.focus();
+  });
+
+  // 父级通过 searchSignal 触发打开搜索框
+  $effect(() => {
+    if (searchSignal !== lastSearchSignal) {
+      lastSearchSignal = searchSignal;
+      openSearch();
+    }
   });
 
   // 字号变化即时生效。无条件先读 fontSize 以确保被追踪——
@@ -211,15 +263,18 @@
     term.open(host!);
     fit.fit();
 
-    // trzsz 过滤器：拦截 trz/tsz 做文件传输，其余原样透传。
-    trzsz = new TrzszFilter({
-      writeToTerminal: writeOut,
-      sendToServer: (input) => {
-        if (sessionId) ssh.write(sessionId, input);
-      },
-      terminalColumns: term.cols,
-    });
-    term.onData((d) => trzsz?.processTerminalInput(d));
+    // trzsz 过滤器：仅 SSH 需要（拦截 trz/tsz 做文件传输，其余原样透传）。
+    // 本地终端不需要 trzsz —— feedServer/sendInput 在 trzsz 为空时直连。
+    if (mode === "ssh") {
+      trzsz = new TrzszFilter({
+        writeToTerminal: writeOut,
+        sendToServer: (input) => {
+          if (sessionId) ssh.write(sessionId, input);
+        },
+        terminalColumns: term.cols,
+      });
+    }
+    term.onData((d) => sendInput(d));
     host!.addEventListener("contextmenu", onContextMenu);
 
     // 复制/粘贴/搜索快捷键：
@@ -229,6 +284,7 @@
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== "keydown" || !e.ctrlKey) return true;
       const k = e.key.toLowerCase();
+      // 终端语义的复制/粘贴（不进快捷键管理器）
       if (k === "c") {
         const sel = term!.getSelection();
         if (e.shiftKey || sel) {
@@ -238,17 +294,11 @@
           }
           return false;
         }
-        return true;
+        return true; // 无选区 Ctrl+C → 终端中断
       }
-      if (k === "v") return false;
-      if (k === "f") {
-        // Ctrl+F（及 Ctrl+Shift+F）打开搜索。中文系统里 Ctrl+Shift 常被输入法切换占用，
-        // 所以主用 Ctrl+F；preventDefault 阻止 WebView 自带的页面查找。
-        e.preventDefault();
-        toggleSearch();
-        return false;
-      }
-      if (e.shiftKey && (k === "t" || k === "r")) return false;
+      if (k === "v") return false; // 原生粘贴
+      // 命中可配置快捷键 → 终端不发字符，交由窗口级处理（搜索经 searchSignal 打开）
+      if (matchAction(e)) return false;
       return true;
     });
 
@@ -258,14 +308,19 @@
       try {
         fit?.fit();
         if (term) trzsz?.setTerminalColumns(term.cols);
-        if (sessionId && term) ssh.resize(sessionId, term.cols, term.rows);
+        if (pendingConnect) {
+          // 之前隐藏时挂起的连接：现在有了真实尺寸，再真正连接（首屏不再乱码）
+          connect();
+        } else if (sessionId && term) {
+          ssh.resize(sessionId, term.cols, term.rows);
+        }
       } catch {
         // 忽略瞬时异常
       }
     });
     ro.observe(host!);
 
-    connect();
+    connectWhenVisible();
   });
 
   onDestroy(() => {

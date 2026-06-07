@@ -1,9 +1,12 @@
 <script lang="ts">
   import { tools, type ToolDef } from "../tools";
-  import { appState, toggleTheme, togglePin, toggleSidebar } from "../state.svelte";
+  import { appState, toggleTheme, togglePin, toggleSidebar, setSidebarWidth } from "../state.svelte";
+  import { resizeHandle } from "../resize";
   import Icon from "./Icon.svelte";
 
   let query = $state("");
+  let asideEl = $state<HTMLElement>();
+  let resizing = $state(false);
 
   const filtered = $derived(
     tools.filter(
@@ -34,9 +37,11 @@
 </script>
 
 <aside
-  class="flex h-screen shrink-0 flex-col border-r border-slate-200 bg-slate-50/80 transition-[width] dark:border-slate-800 dark:bg-slate-900 {collapsed
-    ? 'w-14'
-    : 'w-60'}"
+  bind:this={asideEl}
+  class="relative flex h-screen shrink-0 flex-col border-r border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900 {collapsed
+    ? 'w-14 transition-[width]'
+    : ''} {resizing ? '' : 'transition-[width]'}"
+  style={collapsed ? "" : `width:${appState.sidebarWidth}px`}
 >
   <!-- 标题栏 -->
   {#if collapsed}
@@ -139,6 +144,22 @@
     <div class="border-t border-slate-200 px-4 py-2 text-[11px] text-slate-400 dark:border-slate-800">
       本地运行 · 数据不出本机
     </div>
+    <!-- 右缘拖拽改宽 -->
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      title="拖动调整宽度"
+      class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize transition hover:bg-indigo-400/40 {resizing
+        ? 'bg-indigo-400/50'
+        : ''}"
+      use:resizeHandle={{
+        onstart: () => (resizing = true),
+        onend: () => (resizing = false),
+        onmove: (clientX) => {
+          if (asideEl) setSidebarWidth(clientX - asideEl.getBoundingClientRect().left);
+        },
+      }}
+    ></div>
   {/if}
 </aside>
 

@@ -245,12 +245,14 @@ pub fn run() {
             ssh::commands::ssh_conn_save,
             ssh::commands::ssh_conn_delete,
             ssh::commands::ssh_conn_clone,
-            ssh::commands::ssh_conn_export,
+            ssh::commands::ssh_conn_export_selected,
             ssh::commands::ssh_conn_import,
             ssh::commands::ssh_connect,
             ssh::commands::ssh_write,
             ssh::commands::ssh_resize,
             ssh::commands::ssh_close,
+            // —— 本地终端（复用会话读写/关闭命令）——
+            ssh::local::local_open,
             // —— SFTP 文件传输 ——
             ssh::sftp::sftp_open,
             ssh::sftp::sftp_home,

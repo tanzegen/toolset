@@ -129,5 +129,8 @@
   {:else if name === "unlock"}
     <rect x="3" y="11" width="18" height="11" rx="2" />
     <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+  {:else if name === "keyboard"}
+    <rect x="2" y="6" width="20" height="12" rx="2" />
+    <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" />
   {/if}
 </svg>

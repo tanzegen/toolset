@@ -82,12 +82,17 @@ export const ssh = {
     invoke<ConnView>("ssh_conn_save", { conn, secrets }),
   connDelete: (id: string) => invoke<void>("ssh_conn_delete", { id }),
   connClone: (id: string) => invoke<ConnView>("ssh_conn_clone", { id }),
-  connExport: (path: string) => invoke<void>("ssh_conn_export", { path }),
+  // 选择部分连接导出；newMaster 非空则用新主密码重新加密这份导出（留空则沿用当前主密码）。
+  connExportSelected: (ids: string[], path: string, newMaster?: string) =>
+    invoke<number>("ssh_conn_export_selected", { ids, path, newMaster }),
   connImport: (path: string, fileMaster?: string) =>
     invoke<ImportResult>("ssh_conn_import", { path, fileMaster }),
 
   connect: (connId: string, channel: Channel<SshFrame>) =>
     invoke<string>("ssh_connect", { connId, channel }),
+  // 本地终端：拉起本机 shell（powershell / cmd / pwsh / wsl）。复用下方 write/resize/close。
+  localOpen: (shell: string, channel: Channel<SshFrame>) =>
+    invoke<string>("local_open", { shell, channel }),
   // data 可为终端字符串或 trzsz 的二进制块；统一 base64 后回传，后端解码为原始字节。
   write: (sessionId: string, data: string | Uint8Array) =>
     invoke<void>("ssh_write", { sessionId, data: toB64(data) }),

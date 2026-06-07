@@ -5,6 +5,7 @@
 
 pub mod client;
 pub mod commands;
+pub mod local;
 pub mod sftp;
 pub mod store;
 
