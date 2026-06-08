@@ -98,6 +98,7 @@
   // 指数退避：1,2,4,8,15,30s，封顶 30s
   function scheduleReconnect() {
     if (disposed) return;
+    clearReconnect(); // 先清掉已有定时器，避免叠加出多个重连
     const delays = [1000, 2000, 4000, 8000, 15000, 30000];
     const delay = delays[Math.min(backoffStep, delays.length - 1)];
     backoffStep++;
@@ -127,7 +128,13 @@
 
   async function connect() {
     if (!term || disposed) return;
+    clearReconnect();
     pendingConnect = false;
+    // 关掉上一个会话，避免重连时后端残留「孤儿会话」（长期累积会拖垮乃至卡死）
+    if (sessionId) {
+      ssh.close(sessionId);
+      sessionId = "";
+    }
     const myGen = ++gen;
     setStatus("connecting");
     term.writeln("\x1b[90m正在连接…\x1b[0m");
@@ -151,7 +158,13 @@
       }
     };
     try {
-      sessionId = mode === "local" ? await ssh.localOpen(shell, channel) : await ssh.connect(connId, channel);
+      const id = mode === "local" ? await ssh.localOpen(shell, channel) : await ssh.connect(connId, channel);
+      // 等待期间又发起了新连接（gen 变化）或组件已销毁 → 立刻关掉这个多余会话，杜绝孤儿会话
+      if (myGen !== gen || disposed) {
+        ssh.close(id);
+        return;
+      }
+      sessionId = id;
       backoffStep = 0; // 连上即重置退避
       if (term) ssh.resize(sessionId, term.cols, term.rows);
       if (active) term.focus();

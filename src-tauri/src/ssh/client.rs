@@ -76,7 +76,12 @@ pub async fn connect(p: ConnParams) -> AppResult<(Handle<Handler>, Option<String
     };
 
     let config = Arc::new(client::Config {
-        inactivity_timeout: Some(Duration::from_secs(3600)),
+        // 不因空闲而主动断开——只要服务器不断、连接没真正失活，就保持连接。
+        inactivity_timeout: None,
+        // 周期性 keepalive 维持空闲连接（穿透 NAT/防火墙），并据此发现真正失活的对端
+        // （连续 keepalive_max 次无响应才断开，等同 OpenSSH 的 ServerAliveInterval/CountMax）。
+        keepalive_interval: Some(Duration::from_secs(30)),
+        keepalive_max: 3,
         ..Default::default()
     });
 
