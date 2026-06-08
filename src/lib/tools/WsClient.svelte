@@ -184,7 +184,7 @@
     {/if}
     <button class="{cls.btn} shrink-0 px-2 py-1.5 text-xs {showHeaders ? 'text-indigo-600 dark:text-indigo-300' : ''}" onclick={() => (showHeaders = !showHeaders)} title="握手请求头">头</button>
     <button class="{cls.btn} shrink-0 px-2 py-1.5 text-xs {showInit ? 'text-indigo-600 dark:text-indigo-300' : ''}" onclick={() => (showInit = !showInit)} title="连接后自动发送的消息">事件</button>
-    <button class="{cls.btn} shrink-0 px-2 py-1.5 text-xs" onclick={saveUrl} title="保存此地址"><Icon name="pin" size={14} /></button>
+    <button class="{cls.btn} shrink-0 px-2 py-1.5 text-xs" onclick={saveUrl} title="保存此地址"><Icon name="save" size={14} /></button>
   </div>
 
   {#if showHeaders}

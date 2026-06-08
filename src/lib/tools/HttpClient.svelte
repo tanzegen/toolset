@@ -281,8 +281,8 @@
     <div class="flex flex-wrap items-center gap-1.5 px-2 pb-2">
       <button class="{cls.btn} gap-1 px-2 py-1 text-xs" onclick={() => (showVars = true)} title="环境变量"><Icon name="braces" size={13} />变量</button>
       <button class="{cls.btn} gap-1 px-2 py-1 text-xs" onclick={() => (showCurl = true)} title="导入/导出 curl">curl</button>
-      <button class="{cls.btn} gap-1 px-2 py-1 text-xs" onclick={saveCurrent} title="收藏当前请求"><Icon name="pin" size={13} />收藏</button>
-      <button class="{cls.btn} gap-1 px-2 py-1 text-xs" onclick={() => (showSaved = true)} title="收藏夹"><Icon name="folder" size={13} />收藏夹</button>
+      <button class="{cls.btn} gap-1 px-2 py-1 text-xs" onclick={saveCurrent} title="保存当前请求"><Icon name="save" size={13} />保存</button>
+      <button class="{cls.btn} gap-1 px-2 py-1 text-xs" onclick={() => (showSaved = true)} title="已保存的请求"><Icon name="folder" size={13} />已保存</button>
       <button class="{cls.btn} gap-1 px-2 py-1 text-xs" onclick={() => (showHist = true)} title="历史"><Icon name="clock" size={13} />历史</button>
     </div>
   </div>
@@ -439,12 +439,12 @@
   </div>
 {/if}
 
-<!-- 收藏夹 -->
+<!-- 已保存的请求 -->
 {#if showSaved}
   <div class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" role="presentation" onclick={() => (showSaved = false)}>
     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
     <div class="flex max-h-[80vh] w-full max-w-lg flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900" onclick={(e) => e.stopPropagation()}>
-      <h2 class="mb-2 text-base font-semibold text-slate-800 dark:text-slate-100">收藏夹</h2>
+      <h2 class="mb-2 text-base font-semibold text-slate-800 dark:text-slate-100">已保存的请求</h2>
       <div class="min-h-0 flex-1 overflow-y-auto">
         {#each saved as s (s.id)}
           <div class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/50">
@@ -455,7 +455,7 @@
             <button class="rounded p-1 text-slate-400 hover:text-red-500" title="删除" aria-label="删除" onclick={() => (saved = saved.filter((x) => x.id !== s.id))}><Icon name="trash" size={13} /></button>
           </div>
         {/each}
-        {#if saved.length === 0}<p class="px-2 py-6 text-center text-xs text-slate-400">还没有收藏。用顶部 📌 收藏当前请求。</p>{/if}
+        {#if saved.length === 0}<p class="px-2 py-6 text-center text-xs text-slate-400">还没有保存的请求。点顶部「保存」保存当前请求。</p>{/if}
       </div>
       <div class="mt-3 flex justify-end"><button class={cls.btn} onclick={() => (showSaved = false)}>关闭</button></div>
     </div>
