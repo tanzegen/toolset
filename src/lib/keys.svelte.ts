@@ -9,6 +9,7 @@ export interface KeyAction {
 }
 
 export const KEY_ACTIONS: KeyAction[] = [
+  // 窗口级动作：由 SshTerminal 的窗口 keydown 统一处理（开/关/切标签、搜索、缩放）。
   { id: "newTab", label: "重开最近关闭的标签", long: "Ctrl+Shift+T", short: "" },
   { id: "closeTab", label: "关闭当前标签", long: "Ctrl+Shift+W", short: "" },
   { id: "reconnect", label: "重连当前标签", long: "Ctrl+Shift+R", short: "" },
@@ -17,6 +18,12 @@ export const KEY_ACTIONS: KeyAction[] = [
   { id: "search", label: "终端内搜索", long: "Ctrl+Shift+F", short: "Ctrl+F" },
   { id: "zoomIn", label: "增大字号", long: "Ctrl+Shift+=", short: "Ctrl+=" },
   { id: "zoomOut", label: "减小字号", long: "Ctrl+Shift+-", short: "Ctrl+-" },
+  // 行编辑动作：由 TermView 翻译成 shell 行编辑序列发给远端（仅终端聚焦时生效）。
+  { id: "wordLeft", label: "跳到上一个单词", long: "Ctrl+←", short: "" },
+  { id: "wordRight", label: "跳到下一个单词", long: "Ctrl+→", short: "" },
+  { id: "killWordBack", label: "删除上一个单词", long: "Ctrl+⌫", short: "" },
+  { id: "killLine", label: "删除整行", long: "Ctrl+Shift+⌫", short: "" },
+  { id: "killWordForward", label: "删除下一个单词", long: "Ctrl+⌦", short: "" },
 ];
 
 type Binding = { long: string; short: string };
@@ -79,6 +86,8 @@ const CODE_MAP: Record<string, string> = {
   BracketLeft: "[",
   BracketRight: "]",
   Enter: "Enter",
+  Backspace: "⌫",
+  Delete: "⌦",
   ArrowUp: "↑",
   ArrowDown: "↓",
   ArrowLeft: "←",

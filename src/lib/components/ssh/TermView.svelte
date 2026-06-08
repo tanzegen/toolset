@@ -77,6 +77,17 @@
     else if (sessionId) ssh.write(sessionId, data);
   }
 
+  // 行编辑动作 → shell 行编辑器通用序列。键为 keys.svelte.ts 里的动作 id（可被用户改键）。
+  // 用 Meta(Alt) 系列（M-b/M-f/M-d/M-DEL）而非 Ctrl+方向键的 ANSI 序列：前者是
+  // bash/zsh readline 与 PowerShell PSReadLine 的内置默认绑定，不依赖远端 inputrc，跨服务器一致可用。
+  const EDIT_SEQ: Record<string, string> = {
+    wordLeft: "\x1bb", // 跳到上一个单词（M-b / backward-word）
+    wordRight: "\x1bf", // 跳到下一个单词（M-f / forward-word）
+    killWordBack: "\x1b\x7f", // 删除上一个单词（M-DEL / backward-kill-word）
+    killLine: "\x01\x0b", // 删除整行（C-a 回行首 + C-k 删到行尾）
+    killWordForward: "\x1bd", // 删除下一个单词（M-d / kill-word）
+  };
+
   // 拖拽上传：把拖入的文件交给 trzsz（会自动在远端触发 trz）。需在 shell 提示符处拖放。
   function onDrop(e: DragEvent) {
     e.preventDefault();
@@ -295,23 +306,34 @@
     // - Ctrl+V：交给 xterm 原生 paste（避免双重粘贴）。
     // - Ctrl+Shift+F：搜索。Ctrl+Shift+T/R：交给父级窗口（新标签/重连）。
     term.attachCustomKeyEventHandler((e) => {
-      if (e.type !== "keydown" || !e.ctrlKey) return true;
-      const k = e.key.toLowerCase();
+      if (e.type !== "keydown") return true;
       // 终端语义的复制/粘贴（不进快捷键管理器）
-      if (k === "c") {
-        const sel = term!.getSelection();
-        if (e.shiftKey || sel) {
-          if (sel) {
-            writeText(sel);
-            term!.clearSelection();
+      if (e.ctrlKey) {
+        const k = e.key.toLowerCase();
+        if (k === "c") {
+          const sel = term!.getSelection();
+          if (e.shiftKey || sel) {
+            if (sel) {
+              writeText(sel);
+              term!.clearSelection();
+            }
+            return false;
           }
-          return false;
+          return true; // 无选区 Ctrl+C → 终端中断
         }
-        return true; // 无选区 Ctrl+C → 终端中断
+        if (k === "v") return false; // 原生粘贴
       }
-      if (k === "v") return false; // 原生粘贴
-      // 命中可配置快捷键 → 终端不发字符，交由窗口级处理（搜索经 searchSignal 打开）
-      if (matchAction(e)) return false;
+      // 命中可配置快捷键：行编辑动作就地翻译成序列发给 shell；
+      // 窗口级动作（开关/切标签、搜索、缩放）只吞掉字符，交由窗口 keydown 处理。
+      const action = matchAction(e);
+      if (action) {
+        const seq = EDIT_SEQ[action];
+        if (seq) {
+          e.preventDefault(); // 阻止 WebView 对 Ctrl+⌫ 等的默认处理
+          sendInput(seq);
+        }
+        return false;
+      }
       return true;
     });
 
