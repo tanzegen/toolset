@@ -15,6 +15,8 @@ import Subnet from "./tools/Subnet.svelte";
 import LocalIp from "./tools/LocalIp.svelte";
 import PublicIp from "./tools/PublicIp.svelte";
 import DnsLookup from "./tools/DnsLookup.svelte";
+import HttpClient from "./tools/HttpClient.svelte";
+import WsClient from "./tools/WsClient.svelte";
 import Password from "./tools/Password.svelte";
 import Crypto from "./tools/Crypto.svelte";
 import SshTerminal from "./tools/SshTerminal.svelte";
@@ -150,6 +152,22 @@ export const tools: ToolDef[] = [
     category: "网络",
     icon: "server",
     component: DnsLookup,
+  },
+  {
+    id: "http",
+    name: "HTTP 客户端",
+    desc: "发任意方法/请求头的 HTTP 请求，绕过 CORS；环境变量、历史、收藏、curl 互转。",
+    category: "网络",
+    icon: "send",
+    component: HttpClient,
+  },
+  {
+    id: "ws",
+    name: "WebSocket",
+    desc: "连接 ws/wss，可设握手请求头，收发文本/二进制，消息时间线。",
+    category: "网络",
+    icon: "zap",
+    component: WsClient,
   },
   {
     id: "ssh",

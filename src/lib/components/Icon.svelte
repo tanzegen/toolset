@@ -132,5 +132,10 @@
   {:else if name === "keyboard"}
     <rect x="2" y="6" width="20" height="12" rx="2" />
     <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" />
+  {:else if name === "send"}
+    <path d="M22 2 11 13" />
+    <path d="M22 2 15 22l-4-9-9-4z" />
+  {:else if name === "zap"}
+    <path d="M13 2 3 14h9l-1 8 10-12h-9z" />
   {/if}
 </svg>

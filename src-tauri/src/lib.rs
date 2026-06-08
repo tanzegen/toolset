@@ -1,6 +1,7 @@
 //! Tauri 接入层：把 toolset-core 的纯函数包成 #[tauri::command] 并注册。
-//! 多数工具是无状态纯函数透传；SSH 终端是有状态工具，独立在 `ssh` 模块。
+//! 多数工具是无状态纯函数透传；SSH 终端、HTTP/WS 客户端是有状态工具，独立在 `ssh`/`net` 模块。
 
+mod net;
 mod ssh;
 
 use toolset_core::cron::CronResult;
@@ -205,6 +206,7 @@ pub fn run() {
             // 连接配置落在应用配置目录（不进仓库）。
             let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
             app.manage(ssh::SshState::new(dir.join("connections.json")));
+            app.manage(net::NetState::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -253,6 +255,13 @@ pub fn run() {
             ssh::commands::ssh_close,
             // —— 本地终端（复用会话读写/关闭命令）——
             ssh::local::local_open,
+            // —— HTTP / WebSocket 客户端 ——
+            net::http::http_send,
+            net::http::curl_parse,
+            net::ws::ws_connect,
+            net::ws::ws_send,
+            net::ws::ws_ping,
+            net::ws::ws_close,
             // —— SFTP 文件传输 ——
             ssh::sftp::sftp_open,
             ssh::sftp::sftp_home,

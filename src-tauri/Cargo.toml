@@ -30,6 +30,14 @@ russh = { version = "0.61", default-features = false, features = ["ring", "rsa",
 russh-sftp = "2.3"
 # 本地终端：ConPTY 拉起本机 shell（PowerShell / cmd）。纯 Rust + windows 绑定，契合 GNU 工具链。
 portable-pty = "0.8"
+
+# HTTP/WebSocket 客户端：绕过 webview 的 CORS、可设任意方法与请求头、看原始响应。
+# 统一走 rustls（default-features=false），避开 openssl/native-tls，契合 GNU 工具链。
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "gzip", "brotli", "deflate"] }
+tokio-tungstenite = { version = "0.24", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
+futures-util = "0.3"
+http = "1"
+
 dashmap = "6"
 tokio = { version = "1", features = ["macros", "sync", "rt", "net", "io-util", "time"] }
 uuid = { version = "1", features = ["v4"] }

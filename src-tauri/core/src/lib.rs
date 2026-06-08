@@ -7,6 +7,7 @@ pub mod crypto;
 pub mod cron;
 pub mod encoding;
 pub mod hashing;
+pub mod httpclient;
 pub mod json;
 pub mod jsonstruct;
 pub mod localip;
