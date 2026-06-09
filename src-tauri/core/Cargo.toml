@@ -6,7 +6,9 @@ description = "工具集纯逻辑核心（无 GUI 依赖，可独立单测）"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+# preserve_order：让 serde_json::Value 保留对象键的原始顺序（默认按字母排序）。
+# 格式化/压缩/字段提取据此都保持输入键序，符合开发者预期。
+serde_json = { version = "1", features = ["preserve_order"] }
 thiserror = "2"
 chrono = "0.4"
 chrono-tz = "0.10"

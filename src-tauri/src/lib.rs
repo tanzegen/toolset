@@ -93,6 +93,11 @@ fn json_validate(input: String) -> JsonValidateResult {
 }
 
 #[tauri::command]
+fn json_pick(input: String, paths: Vec<String>) -> AppResult<String> {
+    json::json_pick(input, paths)
+}
+
+#[tauri::command]
 fn hash_text(input: String) -> HashResult {
     hashing::hash_text(input)
 }
@@ -224,6 +229,7 @@ pub fn run() {
             json_format,
             json_minify,
             json_validate,
+            json_pick,
             hash_text,
             uuid_v4,
             cron_explain,

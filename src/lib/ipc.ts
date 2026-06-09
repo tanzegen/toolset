@@ -187,6 +187,8 @@ export const api = {
   jsonMinify: (input: string) => invoke<string>("json_minify", { input }),
   jsonValidate: (input: string) =>
     invoke<JsonValidateResult>("json_validate", { input }),
+  jsonPick: (input: string, paths: string[]) =>
+    invoke<string>("json_pick", { input, paths }),
 
   hashText: (input: string) => invoke<HashResult>("hash_text", { input }),
   uuidV4: (count: number) => invoke<string[]>("uuid_v4", { count }),
