@@ -247,6 +247,7 @@ pub fn run() {
             ssh::commands::ssh_conn_save,
             ssh::commands::ssh_conn_delete,
             ssh::commands::ssh_conn_clone,
+            ssh::commands::ssh_conn_reorder,
             ssh::commands::ssh_conn_export_selected,
             ssh::commands::ssh_conn_import,
             ssh::commands::ssh_connect,

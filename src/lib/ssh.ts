@@ -82,6 +82,8 @@ export const ssh = {
     invoke<ConnView>("ssh_conn_save", { conn, secrets }),
   connDelete: (id: string) => invoke<void>("ssh_conn_delete", { id }),
   connClone: (id: string) => invoke<ConnView>("ssh_conn_clone", { id }),
+  // 手动拖动排序：传完整 id 顺序，后端按此重排并固化为手动模式。
+  connReorder: (ids: string[]) => invoke<void>("ssh_conn_reorder", { ids }),
   // 选择部分连接导出；newMaster 非空则用新主密码重新加密这份导出（留空则沿用当前主密码）。
   connExportSelected: (ids: string[], path: string, newMaster?: string) =>
     invoke<number>("ssh_conn_export_selected", { ids, path, newMaster }),

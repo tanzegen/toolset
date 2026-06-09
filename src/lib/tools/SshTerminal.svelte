@@ -30,6 +30,7 @@
   let connQuery = $state("");
   let collapsedGroups = $state<string[]>(loadCollapsedGroups());
   let menu = $state<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  let draggingConnId = $state<string | null>(null); // 连接拖动排序
 
   function loadCollapsedGroups(): string[] {
     if (typeof localStorage === "undefined") return [];
@@ -47,6 +48,22 @@
       localStorage.setItem("ssh-collapsed-groups", JSON.stringify(collapsedGroups));
   }
 
+  // 拖动连接 a 落到 b 上：仅同组内重排，把 a 插到 b 之前，提交后端持久化（随导出带出）。
+  // 顺序的「真源」是后端 connections 物理序（connList 已按此返回），故直接基于它生成新序。
+  function onConnDrop(targetId: string) {
+    const fromId = draggingConnId;
+    draggingConnId = null;
+    if (!fromId || fromId === targetId) return;
+    const from = list.connections.find((c) => c.id === fromId);
+    const to = list.connections.find((c) => c.id === targetId);
+    if (!from || !to || (from.group || "") !== (to.group || "")) return; // 仅同组内排序
+    const ids = list.connections.map((c) => c.id);
+    const fi = ids.indexOf(fromId);
+    if (fi >= 0) ids.splice(fi, 1);
+    ids.splice(ids.indexOf(targetId), 0, fromId);
+    ssh.connReorder(ids).then(refreshList);
+  }
+
   type TabKind = "term" | "sftp" | "local";
   type Tab = {
     key: string;
@@ -60,7 +77,24 @@
   };
   let tabs = $state<Tab[]>([]);
   let activeKey = $state("");
+  let draggingTabKey = $state<string | null>(null); // 标签拖动排序
   let showKeys = $state(false); // 快捷键设置弹窗
+
+  // 插入新标签：at 指定位置（如克隆时插到来源右侧），缺省追加到末尾。
+  function insertTab(tab: Tab, at?: number) {
+    if (at != null && at >= 0 && at <= tabs.length) tabs.splice(at, 0, tab);
+    else tabs.push(tab);
+    activeKey = tab.key;
+  }
+  // 拖动标签 dragKey 落到 targetKey 上：把 dragKey 移到 targetKey 当前位置。
+  function onTabDrop(targetKey: string) {
+    const from = tabs.findIndex((t) => t.key === draggingTabKey);
+    const to = tabs.findIndex((t) => t.key === targetKey);
+    draggingTabKey = null;
+    if (from < 0 || to < 0 || from === to) return;
+    const [moved] = tabs.splice(from, 1);
+    tabs.splice(to, 0, moved);
+  }
 
   // 选择导出 + 为导出重设主密码
   let exportOpen = $state(false);
@@ -177,6 +211,7 @@
       if (!map.has(g)) map.set(g, []);
       map.get(g)!.push(c);
     }
+    // 组内顺序即后端返回的物理顺序（默认按名称，已手动拖动则为手动序）。
     return [...map.entries()];
   });
   const searching = $derived(connQuery.trim().length > 0);
@@ -244,16 +279,15 @@
     openPw(vault.hasMaster ? "unlock" : "set");
   }
 
-  function openTab(c: ConnView, kind: "term" | "sftp" = "term") {
+  function openTab(c: ConnView, kind: "term" | "sftp" = "term", at?: number) {
     const needSecret = c.hasPassword || c.hasKeyPem;
     if (needSecret && !vault.unlocked) {
-      requireUnlock(() => openTab(c, kind));
+      requireUnlock(() => openTab(c, kind, at));
       return;
     }
     const key = crypto.randomUUID();
     const title = (c.name || c.host) + (kind === "sftp" ? " · SFTP" : "");
-    tabs.push({ key, connId: c.id, title, status: "connecting", relogin: 0, kind, searchSignal: 0 });
-    activeKey = key;
+    insertTab({ key, connId: c.id, title, status: "connecting", relogin: 0, kind, searchSignal: 0 }, at);
   }
 
   // 本地终端默认 shell 与展示名随平台而变：Windows 默认 PowerShell，类 Unix 默认 $SHELL。
@@ -280,11 +314,10 @@
   }
 
   // 本地终端：拉起本机 shell，无需主密码/连接（connId 留空）。
-  function openLocal(shell: string) {
+  function openLocal(shell: string, at?: number) {
     const key = crypto.randomUUID();
     const title = localShellTitle(shell);
-    tabs.push({ key, connId: "", title, status: "connecting", relogin: 0, kind: "local", shell, searchSignal: 0 });
-    activeKey = key;
+    insertTab({ key, connId: "", title, status: "connecting", relogin: 0, kind: "local", shell, searchSignal: 0 }, at);
   }
   function openLocalMenu(e: MouseEvent) {
     e.preventDefault();
@@ -382,12 +415,13 @@
     };
   }
   function cloneTab(t: Tab) {
+    const at = tabs.findIndex((x) => x.key === t.key) + 1; // 插到来源标签右侧
     if (t.kind === "local") {
-      openLocal(t.shell || DEFAULT_LOCAL_SHELL);
+      openLocal(t.shell || DEFAULT_LOCAL_SHELL, at);
       return;
     }
     const c = list.connections.find((x) => x.id === t.connId);
-    if (c) openTab(c, t.kind);
+    if (c) openTab(c, t.kind, at);
   }
 
   function newConn() {
@@ -682,8 +716,16 @@
           {#if expanded}
             {#each conns as c (c.id)}
               <div
-                class="group flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                draggable="true"
+                class="group flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800/60 {draggingConnId === c.id ? 'opacity-40' : ''}"
                 oncontextmenu={(e) => openConnMenu(e, c)}
+                ondragstart={() => (draggingConnId = c.id)}
+                ondragover={(e) => e.preventDefault()}
+                ondrop={(e) => {
+                  e.preventDefault();
+                  onConnDrop(c.id);
+                }}
+                ondragend={() => (draggingConnId = null)}
               >
                 <button class="min-w-0 flex-1 text-left" onclick={() => openTab(c)} title="连接（右键更多操作）">
                   <div class="truncate text-sm text-slate-700 dark:text-slate-200">{c.name || c.host}</div>
@@ -731,10 +773,18 @@
       <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
         {#each tabs as t (t.key)}
           <div
+            draggable="true"
             class="flex shrink-0 items-center gap-1.5 rounded-t-lg border-b-2 px-3 py-1 text-xs {activeKey === t.key
               ? 'border-indigo-500 bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
-              : 'border-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'}"
+              : 'border-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'} {draggingTabKey === t.key ? 'opacity-40' : ''}"
             oncontextmenu={(e) => openTabMenu(e, t)}
+            ondragstart={() => (draggingTabKey = t.key)}
+            ondragover={(e) => e.preventDefault()}
+            ondrop={(e) => {
+              e.preventDefault();
+              onTabDrop(t.key);
+            }}
+            ondragend={() => (draggingTabKey = null)}
           >
             <button onclick={() => (activeKey = t.key)} class="flex items-center gap-1.5">
               <span

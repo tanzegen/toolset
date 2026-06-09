@@ -64,6 +64,10 @@ pub struct Store {
     pub groups: Vec<String>,
     #[serde(default)]
     pub connections: Vec<Connection>,
+    /// 是否手动拖动排过序。false=「默认按名称」，新增/导入会重排到名称序；
+    /// true=用户已手动排序，保持 connections 的物理顺序不再自动重排。随导出一同带出。
+    #[serde(default, rename = "manualOrder")]
+    pub manual_order: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vault: Option<VaultMeta>,
     #[serde(default, rename = "knownHosts")]
@@ -76,6 +80,7 @@ impl Default for Store {
             version: 1,
             groups: Vec::new(),
             connections: Vec::new(),
+            manual_order: false,
             vault: None,
             known_hosts: BTreeMap::new(),
         }
@@ -112,6 +117,19 @@ impl Store {
             self.groups.push(group.to_string());
         }
     }
+
+    /// 按名称稳定排序（不区分大小写）。供「默认按名称」在未手动排序时归一化。
+    pub fn sort_by_name(&mut self) {
+        self.connections
+            .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    }
+
+    /// 未手动排序时按名称归一化；已手动排序则保持原序。
+    pub fn normalize_order(&mut self) {
+        if !self.manual_order {
+            self.sort_by_name();
+        }
+    }
 }
 
 /// 克隆一份连接：换新 id、名字加「副本」后缀；密码类字段一并带过去（上层在 vault
@@ -141,6 +159,12 @@ mod tests {
             note: String::new(),
             secret: Secrets::default(),
         }
+    }
+
+    fn conn_named(id: &str, name: &str) -> Connection {
+        let mut c = conn(id, "");
+        c.name = name.into();
+        c
     }
 
     #[test]
@@ -182,5 +206,39 @@ mod tests {
         assert_eq!(cloned.id, "b");
         assert!(cloned.name.contains("副本"));
         assert_eq!(cloned.host, c.host);
+    }
+
+    #[test]
+    fn sort_by_name_is_case_insensitive_and_stable() {
+        let mut store = Store::default();
+        store.connections.push(conn_named("1", "Bravo"));
+        store.connections.push(conn_named("2", "alpha"));
+        store.connections.push(conn_named("3", "Charlie"));
+        store.sort_by_name();
+        let names: Vec<_> = store.connections.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(names, vec!["alpha", "Bravo", "Charlie"]);
+    }
+
+    #[test]
+    fn normalize_respects_manual_flag() {
+        let mut store = Store::default();
+        store.connections.push(conn_named("1", "zzz"));
+        store.connections.push(conn_named("2", "aaa"));
+        store.manual_order = true;
+        store.normalize_order(); // 手动模式：保持物理序
+        assert_eq!(store.connections[0].name, "zzz");
+        store.manual_order = false;
+        store.normalize_order(); // 默认模式：按名称
+        assert_eq!(store.connections[0].name, "aaa");
+    }
+
+    #[test]
+    fn manual_order_roundtrips_in_json() {
+        let mut store = Store::default();
+        store.manual_order = true;
+        let json = serde_json::to_string(&store).unwrap();
+        assert!(json.contains("\"manualOrder\":true"));
+        let back: Store = serde_json::from_str(&json).unwrap();
+        assert!(back.manual_order);
     }
 }

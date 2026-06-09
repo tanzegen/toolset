@@ -57,7 +57,8 @@ pub struct SshState {
 
 impl SshState {
     pub fn new(path: PathBuf) -> Self {
-        let store = store::load(&path);
+        let mut store = store::load(&path);
+        store.normalize_order(); // 未手动排序则按名称归一化，保证显示/导出顺序一致
         SshState {
             path,
             store: Mutex::new(store),

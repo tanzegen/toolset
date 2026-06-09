@@ -1,5 +1,7 @@
 //! SSH 工具的 Tauri 命令：vault（主密码）、连接 CRUD/克隆/导入导出、会话生命周期。
 
+use std::collections::{HashMap, HashSet};
+
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use serde::{Deserialize, Serialize};
@@ -227,8 +229,23 @@ pub fn ssh_conn_save(
     };
     let view = ConnView::from(&c);
     store.upsert(c);
+    store.normalize_order(); // 未手动排序则新增/改名后按名称归位
     store::save(&state.path, &store);
     Ok(view)
+}
+
+/// 手动拖动排序：按给定的完整 id 顺序重排 connections，并置为手动排序模式。
+#[tauri::command]
+pub fn ssh_conn_reorder(state: State<SshState>, ids: Vec<String>) -> AppResult<()> {
+    let mut store = state.store.lock().unwrap();
+    let pos: HashMap<&String, usize> = ids.iter().enumerate().map(|(i, id)| (id, i)).collect();
+    // 未列入 ids 的连接（理论上不会有）按 usize::MAX 落到末尾，保持稳定。
+    store
+        .connections
+        .sort_by_key(|c| pos.get(&c.id).copied().unwrap_or(usize::MAX));
+    store.manual_order = true;
+    store::save(&state.path, &store);
+    Ok(())
 }
 
 #[tauri::command]
@@ -257,6 +274,7 @@ pub fn ssh_conn_clone(state: State<SshState>, id: String) -> AppResult<ConnView>
     }
     let view = ConnView::from(&c);
     store.upsert(c);
+    store.normalize_order(); // 未手动排序则克隆产物按名称归位
     store::save(&state.path, &store);
     Ok(view)
 }
@@ -276,7 +294,14 @@ pub fn ssh_conn_export_selected(
     new_master: Option<String>,
 ) -> AppResult<usize> {
     let store = state.store.lock().unwrap();
-    let selected: Vec<Connection> = ids.iter().filter_map(|id| store.find(id).cloned()).collect();
+    // 按 store 的物理顺序过滤（而非 ids 的传入顺序），保证部分导出仍保持原相对顺序。
+    let want: HashSet<&String> = ids.iter().collect();
+    let selected: Vec<Connection> = store
+        .connections
+        .iter()
+        .filter(|c| want.contains(&c.id))
+        .cloned()
+        .collect();
     if selected.is_empty() {
         return Err(AppError::Invalid("未选择任何连接".into()));
     }
@@ -318,6 +343,7 @@ pub fn ssh_conn_export_selected(
         Some((_, meta)) => Some(meta),
         None => store.vault.clone(),
     };
+    out.manual_order = store.manual_order; // 让顺序随导出一同带出
 
     let json = serde_json::to_string_pretty(&out)
         .map_err(|e| AppError::Invalid(format!("序列化失败：{e}")))?;
@@ -351,6 +377,7 @@ pub fn ssh_conn_import(
     let cur_key = state.key(); // 用当前 vault 密钥重新加密入库
 
     let mut store = state.store.lock().unwrap();
+    let pre = store.connections.len(); // 导入前已有连接数，用于判断是否「整库导入」
     let (mut imported, mut recovered, mut dropped) = (0usize, 0usize, 0usize);
     for src in &incoming.connections {
         let new_id = Uuid::new_v4().to_string();
@@ -373,6 +400,13 @@ pub fn ssh_conn_import(
     }
     for g in &incoming.groups {
         store.ensure_group(g);
+    }
+    // 顺序处理：导入一份手动排序的整库（之前无连接）→ 采纳其顺序并转为手动模式；
+    // 否则在非手动模式下按名称归一化（导入项按字母序插入），手动模式则保留追加顺序。
+    if incoming.manual_order && pre == 0 {
+        store.manual_order = true;
+    } else {
+        store.normalize_order();
     }
     store::save(&state.path, &store);
     Ok(ImportResult {
