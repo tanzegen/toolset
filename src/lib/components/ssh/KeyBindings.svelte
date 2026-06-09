@@ -20,8 +20,8 @@
       recording = null;
       return;
     }
-    // 仅「单独」按 Backspace/Delete 视为清空；带修饰键时按正常组合录入（如 Ctrl+⌫）。
-    if ((e.key === "Backspace" || e.key === "Delete") && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+    // 仅「单独」按 Backspace/Delete 视为清空；带修饰键时按正常组合录入（如 Ctrl+⌫ / ⌘⌫）。
+    if ((e.key === "Backspace" || e.key === "Delete") && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
       setBinding(recording.id, recording.which, ""); // 清空
       recording = null;
       return;

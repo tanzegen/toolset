@@ -9,6 +9,7 @@
   import "@xterm/xterm/css/xterm.css";
   import { ssh, b64ToBytes, VAULT_LOCKED, type SshFrame } from "../../ssh";
   import { matchAction } from "../../keys.svelte";
+  import { IS_MAC } from "../../platform";
 
   let {
     connId,
@@ -307,12 +308,14 @@
     // - Ctrl+Shift+F：搜索。Ctrl+Shift+T/R：交给父级窗口（新标签/重连）。
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== "keydown") return true;
-      // 终端语义的复制/粘贴（不进快捷键管理器）
-      if (e.ctrlKey) {
+      // 终端语义的复制/粘贴（不进快捷键管理器）。
+      // Windows/Linux 用 Ctrl，mac 额外认 ⌘（Cmd）——但中断信号仍只认 Ctrl+C。
+      if (e.ctrlKey || (IS_MAC && e.metaKey)) {
         const k = e.key.toLowerCase();
         if (k === "c") {
           const sel = term!.getSelection();
-          if (e.shiftKey || sel) {
+          // ⌘C 始终作复制；Ctrl+C 仅在带选区/带 Shift 时复制，否则放行作中断(SIGINT)。
+          if (e.metaKey || e.shiftKey || sel) {
             if (sel) {
               writeText(sel);
               term!.clearSelection();

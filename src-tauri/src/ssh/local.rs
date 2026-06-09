@@ -1,5 +1,6 @@
-//! 本地终端：用 ConPTY（portable-pty）拉起本机 shell（PowerShell / cmd 等），
-//! 把 PTY I/O 桥接到与 SSH **相同**的会话通道（state.sessions），从而复用
+//! 本地终端：用 PTY（portable-pty，Windows 走 ConPTY、类 Unix 走 openpty）拉起本机
+//! shell（Windows：PowerShell / cmd；macOS / Linux：$SHELL / bash / zsh），把 PTY I/O
+//! 桥接到与 SSH **相同**的会话通道（state.sessions），从而复用
 //! ssh_write / ssh_resize / ssh_close —— 本地会话只需多一个 `local_open` 入口。
 //!
 //! PTY 的读/写/调整大小都是阻塞操作，放在独立 OS 线程，不占用 tokio 运行时。
@@ -20,18 +21,39 @@ use super::{SessionCmd, SessionHandle, SshFrame, SshState};
 
 /// 把前端传入的 shell 标识映射为可执行命令；未识别则按程序名直接执行。
 fn build_command(shell: &str) -> CommandBuilder {
-    let mut cmd = match shell {
-        "cmd" => CommandBuilder::new("cmd.exe"),
-        "pwsh" => CommandBuilder::new("pwsh.exe"),
-        "wsl" => CommandBuilder::new("wsl.exe"),
-        "powershell" | "" => CommandBuilder::new("powershell.exe"),
-        other => CommandBuilder::new(other),
-    };
-    // 在用户主目录启动，行为更接近原生终端（默认会落在 system32）。
-    if let Some(home) = std::env::var_os("USERPROFILE") {
+    let mut cmd = resolve_shell(shell);
+    // 在用户主目录启动，行为更接近原生终端（Windows 否则落在 system32）。
+    // Windows 用 USERPROFILE，类 Unix 用 HOME。
+    if let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) {
         cmd.cwd(home);
     }
     cmd
+}
+
+/// Windows 默认 PowerShell；"default" / "" 同样回退到 PowerShell。
+#[cfg(windows)]
+fn resolve_shell(shell: &str) -> CommandBuilder {
+    match shell {
+        "cmd" => CommandBuilder::new("cmd.exe"),
+        "pwsh" => CommandBuilder::new("pwsh.exe"),
+        "wsl" => CommandBuilder::new("wsl.exe"),
+        "powershell" | "default" | "" => CommandBuilder::new("powershell.exe"),
+        other => CommandBuilder::new(other),
+    }
+}
+
+/// 类 Unix（macOS / Linux）：默认取 $SHELL（用户登录 shell），缺失再回退 /bin/sh。
+#[cfg(unix)]
+fn resolve_shell(shell: &str) -> CommandBuilder {
+    match shell {
+        "bash" => CommandBuilder::new("bash"),
+        "zsh" => CommandBuilder::new("zsh"),
+        "sh" => CommandBuilder::new("sh"),
+        "default" | "" => {
+            CommandBuilder::new(std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string()))
+        }
+        other => CommandBuilder::new(other),
+    }
 }
 
 /// 开一个本地 PTY 会话；返回 session_id（与 SSH 会话同命名空间，复用读写/关闭命令）。

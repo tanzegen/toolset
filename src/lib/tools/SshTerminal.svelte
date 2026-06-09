@@ -10,6 +10,7 @@
   import ContextMenu from "../components/ssh/ContextMenu.svelte";
   import KeyBindings from "../components/ssh/KeyBindings.svelte";
   import { matchAction } from "../keys.svelte";
+  import { IS_WINDOWS, IS_MAC } from "../platform";
   import { resizeHandle } from "../resize";
   import {
     ssh,
@@ -151,7 +152,7 @@
     // 恢复上次存续的终端/SFTP/本地标签（远端连接仍存在才恢复；锁定时由 TermView 提示解锁）
     for (const s of savedOpenTabs) {
       if (s.kind === "local") {
-        openLocal(s.shell || "powershell");
+        openLocal(s.shell || DEFAULT_LOCAL_SHELL);
       } else {
         const c = list.connections.find((x) => x.id === s.connId);
         if (c) restoreTab(c, s.kind);
@@ -255,11 +256,33 @@
     activeKey = key;
   }
 
+  // 本地终端默认 shell 与展示名随平台而变：Windows 默认 PowerShell，类 Unix 默认 $SHELL。
+  const DEFAULT_LOCAL_SHELL = IS_WINDOWS ? "powershell" : "default";
+  function localShellTitle(shell: string): string {
+    switch (shell) {
+      case "cmd":
+        return "CMD";
+      case "pwsh":
+        return "pwsh";
+      case "wsl":
+        return "WSL";
+      case "powershell":
+        return "PowerShell";
+      case "bash":
+        return "bash";
+      case "zsh":
+        return "zsh";
+      case "sh":
+        return "sh";
+      default: // "default" / "" / 未知
+        return IS_WINDOWS ? "PowerShell" : "Shell";
+    }
+  }
+
   // 本地终端：拉起本机 shell，无需主密码/连接（connId 留空）。
   function openLocal(shell: string) {
     const key = crypto.randomUUID();
-    const title =
-      shell === "cmd" ? "CMD" : shell === "pwsh" ? "pwsh" : shell === "wsl" ? "WSL" : "PowerShell";
+    const title = localShellTitle(shell);
     tabs.push({ key, connId: "", title, status: "connecting", relogin: 0, kind: "local", shell, searchSignal: 0 });
     activeKey = key;
   }
@@ -269,10 +292,16 @@
     menu = {
       x: e.clientX,
       y: e.clientY,
-      items: [
-        { label: "PowerShell", icon: "terminal", onclick: () => openLocal("powershell") },
-        { label: "命令提示符 (CMD)", icon: "terminal", onclick: () => openLocal("cmd") },
-      ],
+      items: IS_WINDOWS
+        ? [
+            { label: "PowerShell", icon: "terminal", onclick: () => openLocal("powershell") },
+            { label: "命令提示符 (CMD)", icon: "terminal", onclick: () => openLocal("cmd") },
+          ]
+        : [
+            { label: "默认 Shell（$SHELL）", icon: "terminal", onclick: () => openLocal("default") },
+            { label: "zsh", icon: "terminal", onclick: () => openLocal("zsh") },
+            { label: "bash", icon: "terminal", onclick: () => openLocal("bash") },
+          ],
     };
   }
 
@@ -290,7 +319,7 @@
     while (closedTabs.length) {
       const s = closedTabs.pop()!;
       if (s.kind === "local") {
-        openLocal(s.shell || "powershell");
+        openLocal(s.shell || DEFAULT_LOCAL_SHELL);
         return;
       }
       const c = list.connections.find((x) => x.id === s.connId);
@@ -354,7 +383,7 @@
   }
   function cloneTab(t: Tab) {
     if (t.kind === "local") {
-      openLocal(t.shell || "powershell");
+      openLocal(t.shell || DEFAULT_LOCAL_SHELL);
       return;
     }
     const c = list.connections.find((x) => x.id === t.connId);
@@ -728,9 +757,9 @@
       {/if}
       <button
         class="{cls.btn} px-2 py-1 text-xs"
-        onclick={() => openLocal("powershell")}
+        onclick={() => openLocal(DEFAULT_LOCAL_SHELL)}
         oncontextmenu={openLocalMenu}
-        title="新建本地终端（PowerShell · 右键选其它）"
+        title={IS_WINDOWS ? "新建本地终端（PowerShell · 右键选其它）" : "新建本地终端（默认 Shell · 右键选其它）"}
         aria-label="新建本地终端"
       >
         <Icon name="monitor" size={14} />
@@ -775,7 +804,7 @@
       {/each}
       {#if tabs.length === 0}
         <div class="flex h-full items-center justify-center px-6 text-center text-sm text-slate-500">
-          从左侧选择一个连接，或点上方 ▥ 新建本地终端（Ctrl+Shift+T 重开最近关闭 · Ctrl+Shift+R 重连）
+          从左侧选择一个连接，或点上方 ▥ 新建本地终端（{IS_MAC ? "⇧⌘T" : "Ctrl+Shift+T"} 重开最近关闭 · {IS_MAC ? "⇧⌘R" : "Ctrl+Shift+R"} 重连）
         </div>
       {/if}
     </div>
