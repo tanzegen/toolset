@@ -2,7 +2,7 @@
 
 use crate::error::{AppError, AppResult};
 use crate::util::{humanize, parse_tz};
-use chrono::{DateTime, LocalResult, NaiveDate, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, Datelike, LocalResult, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
 use serde::Serialize;
 
@@ -55,6 +55,13 @@ fn build_result(
     let sub = total_nanos.rem_euclid(1_000_000_000) as u32;
     let dt_utc = DateTime::<Utc>::from_timestamp(secs, sub)
         .ok_or_else(|| AppError::Invalid("时间戳超出可表示范围".to_string()))?;
+    // 年份限定在 1–9999：超出此范围 chrono 的 RFC2822 等格式化在 `.to_string()` 时会 panic，
+    // 而 release 下 panic=abort 会让整个应用闪退。这里改为返回友好错误，杜绝崩溃。
+    if !(1..=9999).contains(&dt_utc.year()) {
+        return Err(AppError::Invalid(
+            "时间超出可显示范围（年份需在 1–9999）".to_string(),
+        ));
+    }
     let dt = dt_utc.with_timezone(&tz);
     let delta = dt_utc.timestamp() - now.timestamp();
 
@@ -206,5 +213,21 @@ mod tests {
     #[test]
     fn empty_input_errors() {
         assert!(timestamp_convert("".into(), "auto".into(), "UTC".into()).is_err());
+    }
+
+    #[test]
+    fn out_of_display_range_errors_not_panics() {
+        // 1e12 秒 ≈ 公元 33658 年：从前会让 to_rfc2822 在 .to_string() 时 panic（→ 闪退），
+        // 现在应返回 Err 而非崩溃。覆盖「点时间戳就闪退」的根因。
+        assert!(timestamp_convert("1000000000000".into(), "s".into(), "UTC".into()).is_err());
+        // 反向同理：极远年份的日期也只报错不崩。
+        assert!(timestamp_from_datetime("50000-01-01 00:00:00".into(), "UTC".into()).is_err());
+    }
+
+    #[test]
+    fn large_but_valid_year_still_ok() {
+        // 边界内（年份仍 < 9999）正常返回，不被误拦。
+        let r = timestamp_convert("99999999999".into(), "s".into(), "UTC".into()).unwrap();
+        assert_eq!(r.epoch_seconds, "99999999999");
     }
 }

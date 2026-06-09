@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tools, type ToolDef } from "../tools";
-  import { appState, toggleTheme, togglePin, toggleSidebar, setSidebarWidth } from "../state.svelte";
+  import { appState, toggleTheme, togglePin, toggleSidebar, setSidebarWidth, setActiveTool } from "../state.svelte";
   import { resizeHandle } from "../resize";
   import Icon from "./Icon.svelte";
 
@@ -165,7 +165,7 @@
 
 {#snippet railIcon(t: ToolDef)}
   <button
-    onclick={() => (appState.activeTool = t.id)}
+    onclick={() => setActiveTool(t.id)}
     title={t.name}
     aria-label={t.name}
     class="mb-0.5 flex w-full items-center justify-center rounded-lg p-2 transition {appState.activeTool ===
@@ -181,7 +181,7 @@
   {@const active = appState.activeTool === t.id}
   <div class="group relative mb-0.5">
     <button
-      onclick={() => (appState.activeTool = t.id)}
+      onclick={() => setActiveTool(t.id)}
       class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 pr-8 text-left text-sm transition {active
         ? 'bg-indigo-600 text-white shadow-sm'
         : 'text-slate-600 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:bg-slate-800'}"

@@ -47,11 +47,12 @@ serde_json = "1"
 base64 = "0.22"
 
 # 体积/内存优化：压小 release 二进制
+# 不用 panic = "abort"：它会让任意一次 panic 直接杀掉整个应用（曾导致点时间戳工具
+# 就闪退，且因启动默认进入该工具而再也打不开）。保留 unwind 以便容错。
 [profile.release]
 opt-level = "z"
 lto = true
 codegen-units = 1
-panic = "abort"
 strip = true
 
 # RSA 生成密钥靠大数运算，dev(debug) 下极慢。仅给这些重计算依赖开满优化，

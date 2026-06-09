@@ -32,6 +32,15 @@ function initialCollapsed(): boolean {
   return false;
 }
 
+// 上次停留的工具：下次启动回到这里（未知 id 时由 findTool 兜底到第一个）。
+function initialActiveTool(): string {
+  if (typeof localStorage !== "undefined") {
+    const s = localStorage.getItem("toolset-active-tool");
+    if (s) return s;
+  }
+  return "timestamp";
+}
+
 export const SIDEBAR_MIN = 180;
 export const SIDEBAR_MAX = 420;
 
@@ -44,12 +53,18 @@ function initialSidebarWidth(): number {
 }
 
 export const appState = $state({
-  activeTool: "timestamp",
+  activeTool: initialActiveTool(),
   theme: initialTheme() as Theme,
   pinned: initialPinned(),
   sidebarCollapsed: initialCollapsed(),
   sidebarWidth: initialSidebarWidth(),
 });
+
+/** 切换当前工具（持久化，下次启动回到此工具）。 */
+export function setActiveTool(id: string) {
+  appState.activeTool = id;
+  if (typeof localStorage !== "undefined") localStorage.setItem("toolset-active-tool", id);
+}
 
 export function setTheme(t: Theme) {
   appState.theme = t;
