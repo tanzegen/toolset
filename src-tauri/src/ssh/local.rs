@@ -27,6 +27,21 @@ fn build_command(shell: &str) -> CommandBuilder {
     if let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) {
         cmd.cwd(home);
     }
+    // GUI 启动的进程通常不带 locale 环境变量，shell 会落到 C 区域，
+    // 导致 ls 等把中文文件名显示成 ?/乱码。环境里完全没有 locale 时补一个 UTF-8 字符集。
+    #[cfg(unix)]
+    {
+        let has_locale = std::env::var_os("LC_ALL").is_some()
+            || std::env::var_os("LC_CTYPE").is_some()
+            || std::env::var_os("LANG").is_some();
+        if !has_locale {
+            // macOS/BSD 允许只设字符集、不强制语言；Linux 需要完整 locale。
+            #[cfg(target_os = "macos")]
+            cmd.env("LC_CTYPE", "UTF-8");
+            #[cfg(not(target_os = "macos"))]
+            cmd.env("LANG", "C.UTF-8");
+        }
+    }
     cmd
 }
 

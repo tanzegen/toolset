@@ -20,12 +20,7 @@
       recording = null;
       return;
     }
-    // 仅「单独」按 Backspace/Delete 视为清空；带修饰键时按正常组合录入（如 Ctrl+⌫ / ⌘⌫）。
-    if ((e.key === "Backspace" || e.key === "Delete") && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
-      setBinding(recording.id, recording.which, ""); // 清空
-      recording = null;
-      return;
-    }
+    // Backspace/Delete 当作普通按键录入（⌫ / ⌦，可带修饰）；清空/恢复请用行尾的 ↺ 按钮。
     const combo = eventCombo(e);
     if (!combo) return; // 纯修饰键，继续等
     setBinding(recording.id, recording.which, combo);
@@ -46,7 +41,7 @@
       <button class="{cls.btn} px-2 py-1 text-xs" onclick={resetAll}>全部重置</button>
     </div>
     <p class="mb-3 text-xs text-slate-400">
-      每个操作有「长键」「短键」两套，按其一即可触发。点击键位后按下新组合修改；Esc 取消、单独按 Backspace/Delete 清空。
+      每个操作有「长键」「短键」两套，按其一即可触发。点击键位后按下新组合修改（Backspace/Delete 也可录入）；Esc 取消，点行尾 ↺ 恢复默认。
       中文系统下 Ctrl+Shift 可能被输入法占用，可改用短键或别的组合。
     </p>
 
