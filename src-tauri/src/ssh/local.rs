@@ -27,10 +27,14 @@ fn build_command(shell: &str) -> CommandBuilder {
     if let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) {
         cmd.cwd(home);
     }
-    // GUI 启动的进程通常不带 locale 环境变量，shell 会落到 C 区域，
-    // 导致 ls 等把中文文件名显示成 ?/乱码。环境里完全没有 locale 时补一个 UTF-8 字符集。
     #[cfg(unix)]
     {
+        // 声明终端类型为 xterm-256color，与前端 xterm.js 的能力匹配。GUI 启动的进程
+        // 通常没有 TERM，shell 的行编辑器(zle)缺少光标控制能力，自动补全等重绘会错乱
+        // （如输入 ls 变成 lsls）。终端模拟器本就应主动声明自身 TERM，故无条件设置。
+        cmd.env("TERM", "xterm-256color");
+        // GUI 启动的进程通常也不带 locale 环境变量，shell 会落到 C 区域，
+        // 导致 ls 等把中文文件名显示成 ?/乱码。环境里完全没有 locale 时补一个 UTF-8 字符集。
         let has_locale = std::env::var_os("LC_ALL").is_some()
             || std::env::var_os("LC_CTYPE").is_some()
             || std::env::var_os("LANG").is_some();
