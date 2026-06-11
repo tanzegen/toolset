@@ -46,7 +46,7 @@
   });
 </script>
 
-<ToolPanel title="JSON 转结构" description="按 JSON 推断类型，生成 Go / TypeScript / Rust 结构定义。">
+<ToolPanel wide title="JSON 转结构" description="按 JSON 推断类型，生成 Go / TypeScript / Rust 结构定义。">
   <div class="mb-3 flex flex-wrap items-center gap-3">
     <SegmentedControl
       bind:value={lang}
@@ -74,7 +74,7 @@
       <textarea
         bind:value={json}
         spellcheck="false"
-        class="{cls.field} h-80 resize-none font-mono leading-relaxed"
+        class="{cls.field} {cls.editorTall} resize-none font-mono leading-relaxed"
       ></textarea>
     </div>
     <div>
@@ -86,7 +86,7 @@
         value={output}
         readonly
         spellcheck="false"
-        class="{cls.field} h-80 resize-none bg-slate-50 font-mono leading-relaxed dark:bg-slate-900/60"
+        class="{cls.field} {cls.editorTall} resize-none bg-slate-50 font-mono leading-relaxed dark:bg-slate-900/60"
       ></textarea>
     </div>
   </div>

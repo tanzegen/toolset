@@ -113,7 +113,7 @@
   });
 </script>
 
-<ToolPanel title="JSON 工具" description="格式化、压缩、树视图、字段提取（勾选字段拼成新 JSON），错误带行列定位。">
+<ToolPanel wide title="JSON 工具" description="格式化、压缩、树视图、字段提取（勾选字段拼成新 JSON），错误带行列定位。">
   <div class="mb-3 flex flex-wrap items-center gap-3">
     <SegmentedControl
       bind:value={action}
@@ -160,12 +160,12 @@
         <textarea
           bind:value={input}
           spellcheck="false"
-          class="{cls.field} h-80 resize-none font-mono leading-relaxed"
+          class="{cls.field} {cls.editorTall} resize-none font-mono leading-relaxed"
         ></textarea>
       </div>
       <div>
         <div class="mb-1 flex h-7 items-center"><span class={cls.label}>字段（勾选要保留的）</span></div>
-        <div class="{cls.card} h-80 overflow-auto px-1 py-2">
+        <div class="{cls.card} {cls.editorTall} overflow-auto px-1 py-2">
           {#if fieldTree?.ok && fieldTree.nodes.length}
             <JsonFieldTree nodes={fieldTree.nodes} {picked} ontoggle={toggleNode} />
           {:else if !input.trim()}
@@ -184,7 +184,7 @@
           value={output}
           readonly
           spellcheck="false"
-          class="{cls.field} h-80 resize-none bg-slate-50 font-mono leading-relaxed dark:bg-slate-900/60"
+          class="{cls.field} {cls.editorTall} resize-none bg-slate-50 font-mono leading-relaxed dark:bg-slate-900/60"
         ></textarea>
       </div>
     </div>
@@ -195,7 +195,7 @@
         <textarea
           bind:value={input}
           spellcheck="false"
-          class="{cls.field} h-80 resize-none font-mono leading-relaxed"
+          class="{cls.field} {cls.editorTall} resize-none font-mono leading-relaxed"
         ></textarea>
       </div>
       <div>
@@ -205,7 +205,7 @@
         </div>
         {#if action === "tree"}
           <div
-            class="{cls.card} h-80 overflow-auto px-3 py-2 font-mono text-sm leading-relaxed"
+            class="{cls.card} {cls.editorTall} overflow-auto px-3 py-2 font-mono text-sm leading-relaxed"
           >
             {#if parsed && parsed.ok && parsed.data !== undefined}
               {#key treeDepth}
@@ -220,7 +220,7 @@
             value={output}
             readonly
             spellcheck="false"
-            class="{cls.field} h-80 resize-none bg-slate-50 font-mono leading-relaxed dark:bg-slate-900/60"
+            class="{cls.field} {cls.editorTall} resize-none bg-slate-50 font-mono leading-relaxed dark:bg-slate-900/60"
           ></textarea>
         {/if}
       </div>

@@ -61,6 +61,7 @@
 </script>
 
 <ToolPanel
+  wide
   title="正则测试器"
   description="实时匹配、捕获组与替换。RE2 语义（不支持反向引用 / 环视）。"
 >
@@ -85,7 +86,7 @@
     <textarea
       bind:value={text}
       spellcheck="false"
-      class="{cls.field} h-40 resize-none font-mono leading-relaxed"
+      class="{cls.field} {cls.editorMid} resize-none font-mono leading-relaxed"
     ></textarea>
   </div>
 
@@ -108,7 +109,7 @@
         <div class="select-text whitespace-pre-wrap break-all font-mono text-sm text-slate-700 dark:text-slate-200">{result.replaced}</div>
       </div>
     {:else}
-      <div class="{cls.card} mt-3 max-h-96 overflow-y-auto px-4 py-2">
+      <div class="{cls.card} mt-3 max-h-[calc(30vh_+_14rem)] overflow-y-auto px-4 py-2">
         {#each result.matches as m (m.index)}
           <div class="border-b border-slate-100 py-2 last:border-0 dark:border-slate-800">
             <div class="flex items-center gap-2">

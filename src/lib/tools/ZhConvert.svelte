@@ -45,6 +45,7 @@
 </script>
 
 <ToolPanel
+  wide
   title="简繁转换"
   description="基于 MediaWiki + OpenCC 规则的词组级简繁/地区词转换；选择目标变体即可（自动判断来源）。"
 >
@@ -74,7 +75,7 @@
       <textarea
         bind:value={input}
         spellcheck="false"
-        class="{cls.field} h-72 resize-none leading-relaxed"
+        class="{cls.field} {cls.editorTall} resize-none leading-relaxed"
       ></textarea>
     </div>
     <div>
@@ -86,7 +87,7 @@
         value={output}
         readonly
         spellcheck="false"
-        class="{cls.field} h-72 resize-none bg-slate-50 leading-relaxed dark:bg-slate-900/60"
+        class="{cls.field} {cls.editorTall} resize-none bg-slate-50 leading-relaxed dark:bg-slate-900/60"
       ></textarea>
     </div>
   </div>

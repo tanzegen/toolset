@@ -61,6 +61,7 @@
 </script>
 
 <ToolPanel
+  wide
   title="Base64 / URL 编解码"
   description="Base64（标准 / URL-safe）与 URL 百分号编解码，全 UTF-8。"
 >
@@ -102,7 +103,7 @@
       <textarea
         bind:value={input}
         spellcheck="false"
-        class="{cls.field} h-64 resize-none font-mono leading-relaxed"
+        class="{cls.field} {cls.editorTall} resize-none font-mono leading-relaxed"
       ></textarea>
     </div>
     <div>
@@ -114,7 +115,7 @@
         value={output}
         readonly
         spellcheck="false"
-        class="{cls.field} h-64 resize-none bg-slate-50 font-mono leading-relaxed dark:bg-slate-900/60"
+        class="{cls.field} {cls.editorTall} resize-none bg-slate-50 font-mono leading-relaxed dark:bg-slate-900/60"
       ></textarea>
     </div>
   </div>

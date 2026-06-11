@@ -47,14 +47,14 @@
   }
 </script>
 
-<ToolPanel title="文本 Diff" description="按行比较两段文本，高亮新增与删除。">
+<ToolPanel wide title="文本 Diff" description="按行比较两段文本，高亮新增与删除。">
   <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
     <div>
       <div class="{cls.label} mb-1">原文</div>
       <textarea
         bind:value={left}
         spellcheck="false"
-        class="{cls.field} h-44 resize-none font-mono leading-relaxed"
+        class="{cls.field} {cls.editorMid} resize-none font-mono leading-relaxed"
       ></textarea>
     </div>
     <div>
@@ -62,7 +62,7 @@
       <textarea
         bind:value={right}
         spellcheck="false"
-        class="{cls.field} h-44 resize-none font-mono leading-relaxed"
+        class="{cls.field} {cls.editorMid} resize-none font-mono leading-relaxed"
       ></textarea>
     </div>
   </div>
@@ -78,7 +78,7 @@
       <span class="rounded bg-emerald-50 px-2 py-1 font-medium text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">+{result.added}</span>
       <span class="rounded bg-red-50 px-2 py-1 font-medium text-red-600 dark:bg-red-950/40 dark:text-red-400">-{result.removed}</span>
     </div>
-    <div class="{cls.card} mt-2 max-h-[28rem] overflow-auto py-1">
+    <div class="{cls.card} mt-2 max-h-[calc(32vh_+_16rem)] overflow-auto py-1">
       {#each result.rows as row, i (i)}
         <div class="flex font-mono text-xs leading-relaxed {rowClass(row.tag)}">
           <span class="w-10 shrink-0 select-none px-1 text-right text-slate-400">{row.left_no ?? ""}</span>

@@ -53,6 +53,7 @@
 </script>
 
 <ToolPanel
+  wide
   title="加密 / 解密"
   description="对称 AES-256-GCM / AES-256-CBC / ChaCha20-Poly1305（口令或原始密钥）+ 非对称 RSA-OAEP。"
 >
@@ -113,7 +114,7 @@
       <textarea
         bind:value={input}
         spellcheck="false"
-        class="{cls.field} h-44 resize-none font-mono leading-relaxed"
+        class="{cls.field} {cls.editorShort} resize-none font-mono leading-relaxed"
       ></textarea>
     </div>
     <div>
@@ -125,7 +126,7 @@
         value={output}
         readonly
         spellcheck="false"
-        class="{cls.field} h-44 resize-none bg-slate-50 font-mono leading-relaxed dark:bg-slate-900/60"
+        class="{cls.field} {cls.editorShort} resize-none bg-slate-50 font-mono leading-relaxed dark:bg-slate-900/60"
       ></textarea>
     </div>
   </div>
